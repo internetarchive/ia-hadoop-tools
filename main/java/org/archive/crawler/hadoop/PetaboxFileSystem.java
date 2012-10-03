@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
+import org.apache.http.ConnectionClosedException;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpMessage;
 import org.apache.http.HttpResponse;
@@ -801,11 +802,18 @@ public class PetaboxFileSystem extends FileSystem {
     public int read() throws IOException {
       while (true) {
 	if (in == null) open();
-	int b = in.read();
+	int b;
+	try {
+	  b = in.read();
+	} catch (ConnectionClosedException ex) {
+	  // sender closed socket, probably for long idle period.
+	  LOG.info("connection closed unexpectedly", ex);
+	  b = -1;
+	}
 	if (b == -1) {
-	  // if sender closed socket prematurely, try reopening.
+	  // if receiver/sender closed socket prematurely, try reopening.
 	  if (endpos >= 0 && pos < endpos) {
-	    LOG.info("sender closed prematurely. rereading from " + pos);
+	    LOG.info("socket closed prematurely. rereading from " + pos);
 	    in = null;
 	    continue;
 	  }
