@@ -129,6 +129,7 @@ public class PetaboxFileSystem extends FileSystem {
     this.client = new DefaultHttpClient(connman);
     
     this.maxRetries = conf.getInt(confbase + ".max-retries", this.maxRetries);
+    this.retryDelay = conf.getInt(confbase + ".retry-delay", this.retryDelay);
     this.connectionTimeout = conf.getInt(confbase + ".connection-timeout", this.connectionTimeout);
     this.socketTimeout = conf.getInt(confbase + ".socket-timeout", this.socketTimeout);
     this.metadataConnectionTimeout = conf.getInt(confbase
