@@ -90,7 +90,13 @@ public class PetaboxFileSystem extends FileSystem {
   public static final String USER_AGENT = PetaboxFileSystem.class.getName() + "/" + VERSION;
   
   private Class<? extends ItemSearcher> itemSearcherClass = SearchEngineItemSearcher.class;
-  protected ItemSearcher itemSearcher; 
+  protected ItemSearcher itemSearcher;
+  
+  /**
+   * if non-null and non-emtpy, {@link #listStatus(Path)} will only return
+   * those files of specified media types (unless explicitly specified).
+   */
+  protected String[] fileTypes;
   
   public PetaboxFileSystem() {
   }
@@ -153,6 +159,15 @@ public class PetaboxFileSystem extends FileSystem {
       this.itemSearcher.initialize(this, fsUri, conf);
     } catch (Exception ex) {
       throw new IOException(this.itemSearcherClass.getName() + ": instantiation failed");
+    }
+    
+    String fileTypes = conf.get(confbase + ".file-types");
+    if (fileTypes != null && !fileTypes.isEmpty()) {
+      String[] a = fileTypes.split("(\\s*,)+\\s*");
+      for (int i = 0; i < a.length; i++) {
+	a[i] = a[i].trim();
+      }
+      this.fileTypes = a;
     }
     
     LOG.info("PetaboxFileSystem.initialize:fsUri=" + fsUri);
@@ -604,6 +619,15 @@ public class PetaboxFileSystem extends FileSystem {
     return itemSearcher.searchItems(itemid);
   }
   
+  private boolean accepted(ItemFile ifile) {
+    if (fileTypes == null || fileTypes.length == 0) return true;
+    if (ifile.format == null) return false;
+    for (int i = 0; i < fileTypes.length; i++) {
+      if (ifile.format.equals(fileTypes[i])) return true;
+    }
+    return false;
+  }
+  
   /* (non-Javadoc)
    * @see org.apache.hadoop.fs.FileSystem#listStatus(org.apache.hadoop.fs.Path)
    */
@@ -622,21 +646,21 @@ public class PetaboxFileSystem extends FileSystem {
 	return searchItems(itemid);
       }
       // for regular item, return list of files in it.
-      FileStatus[] files;
       if (md.files != null) {
-	files = new FileStatus[md.files.length];
+	List<FileStatus> files = new ArrayList<FileStatus>();
 	Path qf = makeQualified(f);
 	for (int i = 0; i < md.files.length; i++) {
 	  ItemFile ifile = md.files[i];
+	  if (!accepted(ifile)) continue;
 	  // perhaps blocksize should be much larger than this to prevent Hadoop from splitting input
 	  // into overly small fragments, as range requests incur relatively high overhead.
-	  files[i] = new FileStatus(ifile.size, false, 2, 4096, ifile.mtime, new Path(qf, ifile.name));
+	  files.add(new FileStatus(ifile.size, false, 2, 4096, ifile.mtime, new Path(qf, ifile.name)));
 	}
+	return files.toArray(new FileStatus[files.size()]);
       } else {
 	// metadata API response had no "files" key - assume there's no files.
-	files = new FileStatus[0];
+	return new FileStatus[0];
       }
-      return files;
     } else {
       // file - currently only depth 2 is supported.
       return new FileStatus[0];
