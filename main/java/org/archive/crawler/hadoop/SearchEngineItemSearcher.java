@@ -126,13 +126,21 @@ public class SearchEngineItemSearcher implements ItemSearcher {
 	  }
 	  // it appears search engine often fails to return JSON formatted output despite
 	  // status code 200. detect it here.
-	  Reader reader = new InputStreamReader(entity.getContent(), "UTF-8");
-	  jo = (Map<String, Object>)JSON.parse(reader);
-	  reader.close();
+	  try {
+	    Reader reader = new InputStreamReader(entity.getContent(), "UTF-8");
+	    jo = (Map<String, Object>)JSON.parse(reader);
+	    reader.close();
+	  } catch (IOException ex) {
+	    LOG.warn(uri + " error reading 200 response: " + ex.getMessage());
+	    if (++retries > maxRetries) {
+	      throw new IOException(uri + ": retry exhausted");
+	    }
+	    continue;
+	  }
 	  if (jo == null) {
 	    LOG.warn(uri + " returned 200, but JSON parser failed on entity");
 	    if (++retries > maxRetries) {
-	      throw new IOException(uri + ": retry exhausted on " + uri);
+	      throw new IOException(uri + ": retry exhausted");
 	    }
 	    continue;
 	  }
