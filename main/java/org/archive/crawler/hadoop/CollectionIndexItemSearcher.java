@@ -111,10 +111,18 @@ public class CollectionIndexItemSearcher implements ItemSearcher {
 	try {
 	  while ((line = lines.readLine()) != null) {
 	    ln++;
+	    if (!line.startsWith("{")) {
+	      LOG.warn(uri + ": non-JSON line at " + ln);
+	      continue;
+	    }
 	    @SuppressWarnings("unchecked")
 	    Map<String, Object> jo = (Map<String, Object>)JSON.parse(line);
 	    String iid = (String)jo.get("id");
-	    long mtime = (Long)jo.get("m");
+	    Long mtime = (Long)jo.get("m");
+	    if (mtime == null) {
+	      LOG.warn(uri + ": m undefined or null at line " + ln);
+	      mtime = 0L;
+	    }
 	    Path qf = new Path(fsUri.toString(), "/" + iid);
 	    LOG.debug("collection:" + itemid + " qf=" + qf);
 	    FileStatus fst = new FileStatus(0, true, 2, 4096, mtime, qf);
