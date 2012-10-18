@@ -439,7 +439,7 @@ public class PetaboxFileSystem extends FileSystem {
 	  bao.write(c);
 	}
       } catch (IOException ex) {
-	LOG.warn("error reading metadata response", ex);
+	LOG.warn("error reading metadata response (" + ex.getMessage() + ")");
 	++retries;
 	continue;
       } finally {
