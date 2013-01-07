@@ -39,7 +39,8 @@ public class CollectionIndexItemSearcher implements ItemSearcher {
   protected PetaboxFileSystem fs;
   protected URI fsUri;
   
-  String serviceUri = "http://crawl400.us.archive.org/crawling/wide/getitems.py";
+  //String serviceUri = "http://crawl400.us.archive.org/crawling/wide/getitems.py/";
+  String serviceUri = "http://archive.org/~kenji/getitems.php?c=";
   
   protected int maxRetries = 10;
   protected int retryDelay = 2000; // milliseconds
@@ -52,11 +53,13 @@ public class CollectionIndexItemSearcher implements ItemSearcher {
     this.fs = fs;
     this.fsUri = fsUri;
     
-    serviceUri = conf.get(CollectionIndexItemSearcher.class.getName()+".serviceUri", serviceUri);
+    if (conf != null) {
+      serviceUri = conf.get(CollectionIndexItemSearcher.class.getName()+".serviceUri", serviceUri);
+    }
   }
 
   protected URI buildSearchURI(String itemid) throws URISyntaxException {
-    return URI.create(serviceUri + "/" + itemid);
+    return URI.create(serviceUri + itemid);
   }
   
   /* (non-Javadoc)
@@ -160,4 +163,17 @@ public class CollectionIndexItemSearcher implements ItemSearcher {
     return result.toArray(new FileStatus[result.size()]);
   }
 
+  // main method for quick test against production service.
+  public static void main(String[] args) throws IOException {
+    Configuration conf = new Configuration();
+    URI fsUri = URI.create("petabox://archive.org/");
+    PetaboxFileSystem fs = new PetaboxFileSystem();
+    fs.initialize(fsUri, conf);
+    CollectionIndexItemSearcher searcher = new CollectionIndexItemSearcher();
+    searcher.initialize(fs, fsUri, conf);
+    FileStatus[] items = searcher.searchItems("wide00005");
+    for (int i = 0; i < items.length; i++) {
+      System.out.println(items[i].getPath());
+    }
+  }
 }
