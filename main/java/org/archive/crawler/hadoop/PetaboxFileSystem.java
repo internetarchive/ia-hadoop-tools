@@ -3,11 +3,9 @@
  */
 package org.archive.crawler.hadoop;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -51,6 +49,8 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
+import org.archive.crawler.petabox.CookieFilePetaboxCredentialProvider;
+import org.archive.crawler.petabox.PetaboxCredentialProvider;
 import org.mortbay.util.ajax.JSON;
 
 /**
@@ -78,6 +78,12 @@ public class PetaboxFileSystem extends FileSystem {
   protected int metadataSocketTimeout = 5*1000; // milliseconds
   
   protected String urlTemplate = null;
+  
+  /**
+   * if true, PetaboxFileSystem makes up empty item when Metadata API tells it's non-existent,
+   * instead of throwing FileNotFoundException.
+   */
+  protected boolean ignoreMissingItems = false;
   
   protected HttpClient client;
 
@@ -171,38 +177,22 @@ public class PetaboxFileSystem extends FileSystem {
       this.fileTypes = a;
     }
     
+    this.ignoreMissingItems = conf.getBoolean(confbase + ".ignore-missing-items", this.ignoreMissingItems);
+    
     LOG.info("PetaboxFileSystem.initialize:fsUri=" + fsUri);
   }
   /**
    * read user credentials from ~/.iaauth file with IA cookies.
    */
   private void getCredentials(Configuration conf) {
-    String home = System.getProperty("user.home");
-    File iaauth = new File(home, ".iaauth");
-    if (!iaauth.canRead()) return;
-    try {
-      Reader r = new FileReader(iaauth);
-      BufferedReader br = new BufferedReader(r);
-      try {
-	String line;
-	while ((line = br.readLine()) != null) {
-	  if (line.startsWith("#")) continue;
-	  String[] fields = line.split("\\s+");
-	  if (fields.length < 7) continue;
-	  if (!fields[0].equals(".archive.org")) continue;
-	  if (fields[5].equals("logged-in-user")) {
-	    this.user = fields[6];
-	    conf.set("fs."+fsUri.getScheme()+".user", this.user);
-	  } else if (fields[5].equals("logged-in-sig")) {
-	    this.sig = fields[6];
-	    conf.set("fs."+fsUri.getScheme()+".sig", this.sig);
-	  }
-	}
-      } finally {
-	br.close();
-      }
-    } catch (IOException ex) {
-      LOG.warn("error reading "+iaauth.getPath(), ex);
+    PetaboxCredentialProvider provider = new CookieFilePetaboxCredentialProvider();
+    this.user = provider.getUser();
+    if (this.user != null) {
+      conf.set("fs."+fsUri.getScheme()+".user", this.user);
+    }
+    this.sig = provider.getSignature();
+    if (this.sig != null) {
+      conf.set("fs."+fsUri.getScheme()+".sig", this.sig);
     }
   }
   
@@ -314,6 +304,12 @@ public class PetaboxFileSystem extends FileSystem {
 //    }
     @SuppressWarnings("unchecked")
     public ItemMetadata(Map<String, Object> jo) {
+      // metadata API returns empty object ("{}") for non-existent item.
+      // this can happen when item lookup is out of sync with actual system
+      // (item deleted/lost, confused during shuffling, etc.). detect this
+      // early and don't fail.
+      if (jo.isEmpty()) return;
+      
       this.server = getString(jo, "server");
       // for helping debug metadata API.
       if (this.server == null) {
@@ -364,7 +360,7 @@ public class PetaboxFileSystem extends FileSystem {
       this((Map<String, Object>)JSON.parse(reader));
     }
     public boolean isCollection() {
-      return "collection".equals(properties.get("mediatype"));
+      return properties != null && "collection".equals(properties.get("mediatype"));
     }
   }
 
@@ -456,11 +452,27 @@ public class PetaboxFileSystem extends FileSystem {
       }
       reader.close();
       if (md.server == null) {
-	LOG.warn("metadata API failed (no server info) for item " + itemid + ", try " + retries);
-	LOG.warn("entity=" + new String(bao.toByteArray(), "UTF-8"));
-	++retries;
-	md = null;
-	continue;
+	if (md.dir == null) {
+	  // assume metadata API returned "{}", i.e. non-existent item.
+	  if (++retries > maxRetries) {
+	    // if ignore-missing-items flag is set, return with empty metadata. don't add it
+	    // to the metadataCache.
+	    if (ignoreMissingItems) {
+	      break;
+	    }
+	    // throw specific exception for non-existent item case.
+	    throw new FileNotFoundException("/" + itemid + ": non-existent item, retry exhausted");
+	  }
+	  LOG.warn("metadata API says item non-existent, retrying");
+	  md = null;
+	  continue;
+	} else {
+	  LOG.warn("metadata API failed (no server info) for item " + itemid + ", try " + retries);
+	  LOG.warn("entity=" + new String(bao.toByteArray(), "UTF-8"));
+	  ++retries;
+	  md = null;
+	  continue;
+	}
       }
       metadataCache.put(itemid, md);
     } while (md == null);
