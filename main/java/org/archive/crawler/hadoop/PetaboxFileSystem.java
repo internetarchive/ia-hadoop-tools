@@ -220,6 +220,17 @@ public class PetaboxFileSystem extends FileSystem {
     Object o = map.get(key);
     return o != null ? o.toString() : null;
   }
+  final static boolean getBoolean(Map<String, Object> map, String key) {
+    return getBoolean(map, key, false);
+  }
+  final static boolean getBoolean(Map<String, Object> map, String key, boolean defaultValue) {
+    Object o = map.get(key);
+    if (o instanceof Boolean) {
+      return (Boolean)o;
+    } else {
+      return defaultValue;
+    }
+  }
   public static class ItemFile {
     String name;
     String format;
@@ -264,6 +275,7 @@ public class PetaboxFileSystem extends FileSystem {
     long created;
     long updated;
     ItemFile[] files;
+    boolean solo;
 //    public ItemMetadata(JSONObject jo) {
 //      this.server = jo.optString("server");
 //      this.d1 = jo.optString("d1");
@@ -319,6 +331,7 @@ public class PetaboxFileSystem extends FileSystem {
       this.d2 = getString(jo, "d2");
       this.created = parseLong(jo.get("created"));
       this.updated = parseLong(jo.get("updated"));
+      this.solo = getBoolean(jo, "solo");
       this.properties = new HashMap<String, String>();
       Map<String, Object> joprops = (Map<String, Object>)jo.get("metadata");
       if (joprops != null) {
@@ -553,7 +566,7 @@ public class PetaboxFileSystem extends FileSystem {
       long mtime = md.updated;
       Path qf = makeQualified(f);
       // Note mtime is in seconds and FileStatus wants milliseconds.
-      fstat = new FileStatus(0, true, 2, 4096, mtime * 1000, qf);
+      fstat = new FileStatus(0, true, md.solo ? 1 : 2, 4096, mtime * 1000, qf);
     } else if (depth == 2) {
       // Path is relative (more precisely, no scheme and authority) while Pig is 
       // enumerating target files, but it can be absolute in other use cases. 
@@ -573,7 +586,7 @@ public class PetaboxFileSystem extends FileSystem {
 	  // be interpreted as a local/HDFS file.
 	  Path qf = makeQualified(f);
 	  // Note ifile.mtime is in seconds and FileStatus wants milliseconds.
-	  fstat = new FileStatus(ifile.size, false, 2, 4096, ifile.mtime * 1000, qf);
+	  fstat = new FileStatus(ifile.size, false, md.solo ? 1 : 2, 4096, ifile.mtime * 1000, qf);
 	  break;
 	}
       }
@@ -674,7 +687,7 @@ public class PetaboxFileSystem extends FileSystem {
 	  if (!accepted(ifile)) continue;
 	  // perhaps blocksize should be much larger than this to prevent Hadoop from splitting input
 	  // into overly small fragments, as range requests incur relatively high overhead.
-	  files.add(new FileStatus(ifile.size, false, 2, 4096, ifile.mtime, new Path(qf, ifile.name)));
+	  files.add(new FileStatus(ifile.size, false, md.solo ? 1 : 2, 4096, ifile.mtime, new Path(qf, ifile.name)));
 	}
 	return files.toArray(new FileStatus[files.size()]);
       } else {
