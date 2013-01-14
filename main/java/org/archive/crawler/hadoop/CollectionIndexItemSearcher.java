@@ -121,6 +121,7 @@ public class CollectionIndexItemSearcher implements ItemSearcher {
 	    @SuppressWarnings("unchecked")
 	    Map<String, Object> jo = (Map<String, Object>)JSON.parse(line);
 	    String iid = (String)jo.get("id");
+	    // m is in seconds. be sure to multiply it by 1000 for FileStatus.
 	    Long mtime = (Long)jo.get("m");
 	    if (mtime == null) {
 	      LOG.warn(uri + ": m undefined or null at line " + ln);
@@ -128,7 +129,7 @@ public class CollectionIndexItemSearcher implements ItemSearcher {
 	    }
 	    Path qf = new Path(fsUri.toString(), "/" + iid);
 	    LOG.debug("collection:" + itemid + " qf=" + qf);
-	    FileStatus fst = new FileStatus(0, true, 2, 4096, mtime, qf);
+	    FileStatus fst = new FileStatus(0, true, 2, 4096, mtime * 1000, qf);
 	    result.add(fst);
 	  }
 	} catch (IOException ex) {
