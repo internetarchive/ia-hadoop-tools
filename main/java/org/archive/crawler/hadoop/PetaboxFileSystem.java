@@ -552,21 +552,28 @@ public class PetaboxFileSystem extends FileSystem {
       ItemMetadata md = getItemMetadata(itemid);
       long mtime = md.updated;
       Path qf = makeQualified(f);
-      fstat = new FileStatus(0, true, 2, 4096, mtime, qf);
+      // Note mtime is in seconds and FileStatus wants milliseconds.
+      fstat = new FileStatus(0, true, 2, 4096, mtime * 1000, qf);
     } else if (depth == 2) {
-      String sf = f.toString();
-      LOG.info("sf=" + sf);
-      int ps = sf.indexOf(Path.SEPARATOR_CHAR, 1);
-      String itemid = ps == -1 ? /* should not happen */ sf : sf.substring(1, ps);
-      ItemMetadata md = getItemMetadata(itemid);
+      // Path is relative (more precisely, no scheme and authority) while Pig is 
+      // enumerating target files, but it can be absolute in other use cases. 
+      // Don't assume Path is relative.
+      Path itempath = f.getParent();
+      if (itempath == null) {
+	// this should not happen because depth == 2
+	throw new FileNotFoundException(f + "parent is null despite depth==2");
+      }
+      String itemid = itempath.getName();
       String fn = f.getName();
+      ItemMetadata md = getItemMetadata(itemid);
       for (int i = 0; i < md.files.length; i++) {
 	ItemFile ifile = md.files[i];
 	if (ifile != null && fn.equals(ifile.name)) {
 	  // we need to fully URI-qualified Path. Since f has path part only, it will
 	  // be interpreted as a local/HDFS file.
 	  Path qf = makeQualified(f);
-	  fstat = new FileStatus(ifile.size, false, 2, 4096, ifile.mtime, qf);
+	  // Note ifile.mtime is in seconds and FileStatus wants milliseconds.
+	  fstat = new FileStatus(ifile.size, false, 2, 4096, ifile.mtime * 1000, qf);
 	  break;
 	}
       }
