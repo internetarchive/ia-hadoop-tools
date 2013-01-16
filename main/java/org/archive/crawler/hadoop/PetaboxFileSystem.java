@@ -592,7 +592,7 @@ public class PetaboxFileSystem extends FileSystem {
       }
     } else {
       // file - currently only depth <= 2 is supported.
-      throw new IOException("only 2-depth path is supported.");
+      throw new IOException(f.toString() + ": only 2-depth path is supported.");
     }
     return fstat;
   }
