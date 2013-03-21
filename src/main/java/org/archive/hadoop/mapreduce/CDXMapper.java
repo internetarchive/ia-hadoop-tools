@@ -1,6 +1,7 @@
 package org.archive.hadoop.mapreduce;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
 import org.apache.commons.httpclient.URIException;
@@ -90,7 +91,7 @@ public class CDXMapper extends Mapper<Object, Text, Text, Text>
 		
 		try {
 			urlKey = keyMaker.makeKey(origUrl);
-		} catch (URIException e) {
+		} catch (URISyntaxException e) {
 			urlKey = origUrl;
 			e.printStackTrace();
 			if (skipOnCanonFail) {

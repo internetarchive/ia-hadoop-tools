@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.URISyntaxException;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
@@ -95,7 +96,7 @@ public class CDXTransformer {
 		HandyURL h;
 		try {
 			h = URLParser.parse(originalUrl);
-		} catch (URIException e) {
+		} catch (URISyntaxException e) {
 			LOG.warning(String.format("Bad original URL(%s) error(%s)",
 					originalUrl,e.getMessage()));
 			return;
