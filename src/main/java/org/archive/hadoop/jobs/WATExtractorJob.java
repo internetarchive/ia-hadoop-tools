@@ -50,7 +50,6 @@ public class WATExtractorJob extends Configured implements Tool {
 		
 	}
 
-	@Override
 	public int run(String[] args) throws Exception {
 
 		Job job = new Job(getConf(), "wat-extractor");
