@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.hadoop;
+package org.archive.hadoop.pig;
 
 import java.io.IOException;
 
@@ -19,6 +19,8 @@ import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigSplit;
 import org.apache.pig.data.DataByteArray;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
+import org.archive.hadoop.mapreduce.CDXInputFormat;
+import org.archive.hadoop.mapreduce.LFOnlyLineRecordReader;
 
 /**
  * Pig LoadFunc for reading CDXes.

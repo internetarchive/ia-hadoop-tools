@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.hadoop;
+package org.archive.hadoop.pig.udf;
 
 import java.io.IOException;
 import java.text.DateFormat;

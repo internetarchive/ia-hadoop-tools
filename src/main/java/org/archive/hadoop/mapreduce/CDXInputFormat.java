@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.hadoop;
+package org.archive.hadoop.mapreduce;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;

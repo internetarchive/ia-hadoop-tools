@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.petabox;
+package org.archive.petabox;
 
 /**
  * a component that provides credential for accessing petabox

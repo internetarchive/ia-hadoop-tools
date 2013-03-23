@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.hadoop;
+package org.archive.hadoop.mapreduce;
 
 import java.io.IOException;
 import java.util.ArrayList;

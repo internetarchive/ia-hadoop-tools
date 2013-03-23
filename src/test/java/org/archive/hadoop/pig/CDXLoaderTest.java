@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.hadoop;
+package org.archive.hadoop.pig;
 
 import java.io.IOException;
 
@@ -12,6 +12,8 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.pig.data.DataByteArray;
 import org.apache.pig.data.Tuple;
+import org.archive.hadoop.mapreduce.LFOnlyLineRecordReader;
+import org.archive.hadoop.pig.CDXLoader;
 import org.junit.Test;
 
 /**

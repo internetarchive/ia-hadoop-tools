@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.hadoop;
+package org.archive.hadoop.fs;
 
 import java.io.BufferedReader;
 import java.io.IOException;

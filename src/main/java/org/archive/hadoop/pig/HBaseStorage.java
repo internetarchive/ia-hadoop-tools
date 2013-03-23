@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.archive.crawler.hadoop;
+package org.archive.hadoop.pig;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;

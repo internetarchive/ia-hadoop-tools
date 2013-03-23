@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.hadoop;
+package org.archive.hadoop.fs;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -49,8 +49,9 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
-import org.archive.crawler.petabox.CookieFilePetaboxCredentialProvider;
-import org.archive.crawler.petabox.PetaboxCredentialProvider;
+import org.archive.hadoop.util.HadoopUtil;
+import org.archive.petabox.CookieFilePetaboxCredentialProvider;
+import org.archive.petabox.PetaboxCredentialProvider;
 import org.mortbay.util.ajax.JSON;
 
 /**

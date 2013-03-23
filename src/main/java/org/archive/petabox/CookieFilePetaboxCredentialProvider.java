@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.petabox;
+package org.archive.petabox;
 
 import java.io.BufferedReader;
 import java.io.File;

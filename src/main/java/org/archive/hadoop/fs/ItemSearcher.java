@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.archive.crawler.hadoop;
+package org.archive.hadoop.fs;
 
 import java.io.IOException;
 import java.net.URI;
