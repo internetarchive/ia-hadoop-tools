@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
-import org.apache.commons.httpclient.URIException;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -35,10 +34,20 @@ public class CDXMapper extends Mapper<Object, Text, Text, Text>
 	private boolean omitNoArchive = false;
 	private boolean noRedirect = true;
 	private boolean skipOnCanonFail = false;
-	private URLKeyMaker keyMaker = new WaybackURLKeyMaker();
+	private URLKeyMaker keyMaker = null;
 	
 	public static String DEFAULT_BLANK = "-";
 	public static String DEFAULT_GZ_LEN = DEFAULT_BLANK;
+	
+	public CDXMapper()
+	{
+		keyMaker = new WaybackURLKeyMaker(true);
+	}
+	
+	public CDXMapper(boolean surtMode)
+	{
+		keyMaker = new WaybackURLKeyMaker(surtMode);
+	}
 	
 	public String convertLine(String cdxLine) {
 		if (convert(cdxLine) == null) {
