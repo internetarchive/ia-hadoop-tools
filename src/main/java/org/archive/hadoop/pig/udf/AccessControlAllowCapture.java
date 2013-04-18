@@ -22,11 +22,14 @@ public class AccessControlAllowCapture extends FilterFunc {
 	
 	public AccessControlAllowCapture(String oracleUrl, String accessGroup)
 	{
-		this.client = new AccessControlClient(oracleUrl);
+		this.client = new AccessControlClient(oracleUrl, true);
 		this.accessGroup = accessGroup;
 		
 		// not really used, so just initing once
 		this.retrievalDate = new Date();
+		
+		// Loads all the rules
+		this.client.prepare(null);
 	}
 
 	@Override
