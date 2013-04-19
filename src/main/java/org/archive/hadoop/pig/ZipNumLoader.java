@@ -3,18 +3,23 @@ package org.archive.hadoop.pig;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.input.NLineInputFormat;
+import org.apache.pig.CollectableLoadFunc;
+import org.apache.pig.FileSplitComparable;
 import org.apache.pig.IndexableLoadFunc;
+import org.apache.pig.OrderedLoadFunc;
 import org.apache.pig.builtin.TextLoader;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
-public class ZipNumLoader extends TextLoader implements IndexableLoadFunc {
+public class ZipNumLoader extends TextLoader implements IndexableLoadFunc, CollectableLoadFunc, OrderedLoadFunc {
 	
 	protected final static String ZIPNUM_SUMMARY_URI = "zipnum.summaryUri";
 	protected final static String ZIPNUM_NUM_SPLITS = "zipnum.numSplits";
@@ -138,5 +143,18 @@ public class ZipNumLoader extends TextLoader implements IndexableLoadFunc {
 			mergingReader.close();
 			mergingReader = null;
 		}
+	}
+
+	@Override
+	public WritableComparable<?> getSplitComparable(InputSplit split)
+			throws IOException {
+		
+		FileSplit fileSplit = (FileSplit)split;
+		return new FileSplitComparable(fileSplit.getPath().toString(), fileSplit.getStart());
+	}
+
+	@Override
+	public void ensureAllKeyInstancesInSameSplit() throws IOException {
+		// TODO Auto-generated method stub
 	}
 }
