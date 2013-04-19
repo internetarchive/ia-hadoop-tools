@@ -2,16 +2,19 @@ package org.archive.hadoop.pig;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.NLineInputFormat;
+import org.apache.pig.IndexableLoadFunc;
 import org.apache.pig.builtin.TextLoader;
+import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
-public class ZipNumLoader extends TextLoader {
+public class ZipNumLoader extends TextLoader implements IndexableLoadFunc {
 	
 	protected final static String ZIPNUM_SUMMARY_URI = "zipnum.summaryUri";
 	protected final static String ZIPNUM_NUM_SPLITS = "zipnum.numSplits";
@@ -29,7 +32,7 @@ public class ZipNumLoader extends TextLoader {
 	
 	protected int numSplits = 0;
 	
-	protected ZipNumRecordReader lastReader;
+	protected ZipNumRecordReader mergingReader;
 	
 	public ZipNumLoader()
 	{
@@ -96,11 +99,44 @@ public class ZipNumLoader extends TextLoader {
 					InputSplit genericSplit, TaskAttemptContext context)
 					throws IOException {
 				
-				//Path path = ((FileSplit)genericSplit).getPath();
 				return new ZipNumRecordReader();
-				//in = lastReader = new ZipNumRecordReader();
-				//return lastReader;
 			}		
 		};
+	}
+
+	@Override
+	public Tuple getNext() throws IOException {
+		if (mergingReader != null) {
+			super.prepareToRead(mergingReader, null);
+		}
+		
+		return super.getNext();
+	}
+	
+
+	@Override
+	public void initialize(Configuration conf) throws IOException {
+		mergingReader = new ZipNumRecordReader();
+	}
+
+	@Override
+	public void seekNear(Tuple tuple) throws IOException {
+		if (tuple.isNull() || tuple.size() < 1) {
+			return;
+		}
+		
+		String theKey = (String)tuple.get(0);
+		
+		if (mergingReader != null) {
+			mergingReader.seekNear(theKey);
+		}
+	}
+
+	@Override
+	public void close() throws IOException {
+		if (mergingReader != null) {
+			mergingReader.close();
+			mergingReader = null;
+		}
 	}
 }
