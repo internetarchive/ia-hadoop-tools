@@ -20,7 +20,7 @@ import org.archive.hadoop.pig.ZipNumRecordReader;
 
 public class MergeCluster implements Tool {
 	
-	public static final String TOOL_NAME = "cdx-merge=sort";
+	public static final String TOOL_NAME = "cdx-sort-merge";
 	public static final String TOOL_DESCRIPTION = "map/reduce program that merges existing CDX zipnum clusters";
 
 	Configuration conf = null;
@@ -31,7 +31,7 @@ public class MergeCluster implements Tool {
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		int res = ToolRunner.run(new Configuration(), new BuildCluster(), args);
+		int res = ToolRunner.run(new Configuration(), new MergeCluster(), args);
 		System.exit(res);
 	}
 
@@ -58,7 +58,7 @@ public class MergeCluster implements Tool {
 	
 	protected int runMerge(String inputPath, String outputPath, int numOutputParts, int numLinesPerInputSplit) throws IOException, ClassNotFoundException, InterruptedException
 	{		
-		Job job = new Job(getConf(), "cdx-merge-sort");
+		Job job = new Job(getConf(), "cdx-sort-merge");
 		
 		Configuration conf = job.getConfiguration();
 		

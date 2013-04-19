@@ -107,6 +107,10 @@ public class JobDriver {
 					WATExtractorJob.class,
 					WATExtractorJob.TOOL_DESCRIPTION);
 			
+			pgd.addClass(MergeCluster.TOOL_NAME,
+					MergeCluster.class,
+					MergeCluster.TOOL_DESCRIPTION);			
+			
 			pgd.driver(args);
 
 			exitCode = 0;

@@ -7,13 +7,12 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Partitioner;
-import org.apache.pig.impl.io.NullableText;
-import org.apache.pig.impl.io.NullableTuple;
 import org.archive.util.binsearch.SortedTextFile;
 import org.archive.util.iterator.CloseableIterator;
 
-public class ZipNumPartitioner extends Partitioner<NullableText, NullableTuple> implements Configurable {
+public class ZipNumPartitioner extends Partitioner<Text, Text> implements Configurable {
 	
 	public final static String ZIPNUM_PARTITIONER_CLUSTER = "pig.zipnum.partitioner.clusterSummary";
 	
@@ -30,7 +29,7 @@ public class ZipNumPartitioner extends Partitioner<NullableText, NullableTuple> 
 	protected List<String> splitList = null;
 	
 	@Override
-	public int getPartition(NullableText key, NullableTuple value, int numSplits) {
+	public int getPartition(Text key, Text value, int numSplits) {
 		
 		if (summary == null) {
 			return 0;
@@ -40,11 +39,8 @@ public class ZipNumPartitioner extends Partitioner<NullableText, NullableTuple> 
 			loadSplits(numSplits);
 		}
 		
-		if (key.isNull()) {
-			return 0;
-		}
-		
-		String valueURL = (String)key.getValueAsPigType();
+		String valueURL = value.toString();
+		//String valueURL = (String)key.getValueAsPigType();
 		//String valueURL = (key.isNull() ? value.toString() : key.toString());
 		
 		int spaceIndex = valueURL.indexOf(' ');
