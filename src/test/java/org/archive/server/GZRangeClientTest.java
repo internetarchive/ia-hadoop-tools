@@ -9,7 +9,7 @@ import junit.framework.TestCase;
 
 public class GZRangeClientTest extends TestCase {
 
-//	public void testAppend() throws ParseException, IOException {
+	public void testAppend() throws ParseException, IOException {
 //		File output = new File("/tmp/gzrclient-tmp");
 //		output.mkdirs();
 //		String prefix = "gzr-prefix-";
@@ -41,6 +41,6 @@ public class GZRangeClientTest extends TestCase {
 //			caught = e;
 //		}
 //		assertNull(caught);
-//	}
+	}
 
 }
