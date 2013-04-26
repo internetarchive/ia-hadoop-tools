@@ -23,6 +23,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpGet;
+import org.archive.petabox.PetaboxClient;
 import org.mortbay.util.ajax.JSON;
 
 /**
@@ -117,7 +118,8 @@ public class MetaManagerItemSearcher implements ItemSearcher {
       } catch (URISyntaxException ex) {
 	throw new IOException("failed to build URI for itemid=" + itemid + ", start=" + start, ex);
       }
-      HttpGet get = fs.createHttpGet(uri);
+      PetaboxClient pbclient = fs.getPetaboxClient();
+//      HttpGet get = fs.createHttpGet(uri);
       HttpEntity entity = null;
       Map<String, Object> jo = null;
       int retries = 0;
@@ -130,7 +132,8 @@ public class MetaManagerItemSearcher implements ItemSearcher {
 	}
 	HttpResponse resp;
 	try {
-	  resp = fs.getHttpClient().execute(get);
+//	  resp = fs.getHttpClient().execute(get);
+		resp = pbclient.doGet(uri);
 	} catch (IOException ex) {
 	  LOG.warn("connection to " + uri + " failed", ex);
 	  if (++retries > maxRetries) {
