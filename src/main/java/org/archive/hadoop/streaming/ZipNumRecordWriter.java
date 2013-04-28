@@ -15,7 +15,7 @@ import org.archive.format.gzip.GZIPFooter;
 import org.archive.format.gzip.GZIPHeader;
 import org.archive.util.io.CRCOutputStream;
 
-public class ZipNumRecordWriter<K> implements RecordWriter<K, Text>{
+public class ZipNumRecordWriter implements RecordWriter<Text, Text>{
     protected DataOutputStream outMain;
     protected DataOutputStream outSummary;
     protected int limit;
@@ -96,7 +96,7 @@ public class ZipNumRecordWriter<K> implements RecordWriter<K, Text>{
 	}
 	
 	@Override
-	public void write(K key, Text val) throws IOException {
+	public void write(Text key, Text val) throws IOException {
 //		if (key.getLength() == 0) {
 //			writeLine(val.toString());
 //		} else if (val.getLength() == 0) {
@@ -104,7 +104,7 @@ public class ZipNumRecordWriter<K> implements RecordWriter<K, Text>{
 //		} else {
 //			writeLine(key.toString() + delim + val.toString());
 //		}
-		writeLine(val.toString());
+		writeLine(key.toString());
 	}
 	
 	private void finishCurrent() throws IOException {

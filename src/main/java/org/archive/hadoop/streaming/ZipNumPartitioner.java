@@ -11,9 +11,9 @@ import org.apache.hadoop.mapred.Partitioner;
 import org.archive.util.binsearch.SortedTextFile;
 import org.archive.util.iterator.CloseableIterator;
 
-public class ZipNumPartitioner<K> implements Partitioner<K, Text> {
+public class ZipNumPartitioner implements Partitioner<Text, Text> {
 	
-	public final static String ZIPNUM_PARTITIONER_CLUSTER = "pig.zipnum.partitioner.clusterSummary";
+	public final static String ZIPNUM_PARTITIONER_CLUSTER = "zipnum.partitioner.clusterSummary";
 	
 	//protected ZipNumCluster cluster;
 	SortedTextFile summary = null;
@@ -28,30 +28,43 @@ public class ZipNumPartitioner<K> implements Partitioner<K, Text> {
 	protected List<String> splitList = null;
 	
 	@Override
-	public int getPartition(K key, Text value, int numSplits) {
+	public int getPartition(Text key, Text value, int numSplits) {
 		
 		if (summary == null) {
 			return 0;
 		}
 		
-		if ((splitList == null) || (splitList.size() != numSplits)) {
+		if (numSplits <= 1) {
+			return 0;
+		}
+		
+		if ((splitList == null) || (splitList.size() != (numSplits - 1))) {
 			loadSplits(numSplits);
 		}
 		
-		String valueURL = value.toString();
-		//String valueURL = (String)key.getValueAsPigType();
-		//String valueURL = (key.isNull() ? value.toString() : key.toString());
+		String searchKey = key.toString();
 		
-		int spaceIndex = valueURL.indexOf(' ');
+		int spaceIndex = searchKey.indexOf(' ');
 		
 		if (spaceIndex >= 0) {
-			valueURL = valueURL.substring(0, spaceIndex);
+			searchKey = searchKey.substring(0, spaceIndex);
 		}
 		
-//		key.setIndex((byte)0);
-//		value.setIndex((byte)0);
+		int index = linSearchSplits(searchKey);
+		return index;
+	}
+	
+	protected int linSearchSplits(String key)
+	{
+		int index = 0;
 		
-		int index = binSearchSplits(valueURL);
+		for (String split : splitList) {
+			if (key.compareTo(split) <= 0) {
+				return index;
+			}
+			index++;
+		}
+		
 		return index;
 	}
 
@@ -76,6 +89,11 @@ public class ZipNumPartitioner<K> implements Partitioner<K, Text> {
 			splitIter = summary.getSplitIterator(EMPTY_STRING, EMPTY_STRING, numSplits);
 			
 			splitList = new ArrayList<String>();
+			
+			// Skip first line, don't need the beginning line here
+			if (splitIter.hasNext()) {
+				splitIter.next();
+			}
 			
 			while (splitIter.hasNext()) {
 				String str = splitIter.next();

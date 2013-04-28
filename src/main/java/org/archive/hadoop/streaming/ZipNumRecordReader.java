@@ -3,7 +3,6 @@ package org.archive.hadoop.streaming;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -13,7 +12,7 @@ import org.archive.format.gzip.zipnum.ZipNumCluster;
 import org.archive.format.gzip.zipnum.ZipNumParams;
 import org.archive.util.iterator.CloseableIterator;
 
-public class ZipNumRecordReader implements RecordReader<LongWritable, Text> {
+public class ZipNumRecordReader implements RecordReader<Text, Text> {
 	
 	protected ZipNumCluster cluster = null;
 		
@@ -52,14 +51,14 @@ public class ZipNumRecordReader implements RecordReader<LongWritable, Text> {
 	}
 
 	@Override
-	public synchronized boolean next(LongWritable key, Text value)
+	public synchronized boolean next(Text key, Text value)
 			throws IOException {
 
 		if (cdxReader != null && cdxReader.hasNext()) {
 			
 			String cdxLine = cdxReader.next();
-			key.set(this.getPos());
-			value.set(cdxLine);	
+			key.set(cdxLine);
+			value.set("");	
 			return true;
 		} else {
 			return false;
@@ -94,8 +93,8 @@ public class ZipNumRecordReader implements RecordReader<LongWritable, Text> {
 
 
 	@Override
-	public LongWritable createKey() {
-		return inner.createKey();
+	public Text createKey() {
+		return new Text();
 	}
 
 

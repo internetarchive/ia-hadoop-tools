@@ -15,7 +15,7 @@ import org.apache.hadoop.mapred.TaskID;
 import org.apache.hadoop.util.Progressable;
 import org.archive.hadoop.util.PartitionName;
 
-public class ZipNumOutputFormat<K> extends FileOutputFormat<K, Text> {
+public class ZipNumOutputFormat extends FileOutputFormat<Text, Text> {
 	private int count;
 	private static final int DEFAULT_ZIP_NUM_LINES = 3000;
 	private static final String ZIP_NUM_LINES_CONFIGURATION = "conf.zipnum.count";
@@ -42,7 +42,7 @@ public class ZipNumOutputFormat<K> extends FileOutputFormat<K, Text> {
 	}
 
 	@Override
-	public RecordWriter<K, Text> getRecordWriter(FileSystem ignored,
+	public RecordWriter<Text, Text> getRecordWriter(FileSystem ignored,
 			JobConf conf, String name, Progressable progress) throws IOException {
 
 
@@ -64,7 +64,7 @@ public class ZipNumOutputFormat<K> extends FileOutputFormat<K, Text> {
 		FSDataOutputStream mainOut = mainFs.create(mainFile, false, buffSize, progress);
 		FSDataOutputStream summaryOut = summaryFs.create(summaryFile, false, buffSize, progress);
 		
-		return new ZipNumRecordWriter<K>(count, mainOut, summaryOut, partitionName);
+		return new ZipNumRecordWriter(count, mainOut, summaryOut, partitionName);
 	}
 
 	/**
