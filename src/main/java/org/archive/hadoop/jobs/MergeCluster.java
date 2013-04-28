@@ -5,18 +5,15 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.NLineInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.archive.hadoop.mapreduce.ZipNumAllOutputFormat;
+import org.archive.hadoop.pig.ZipNumInputFormat;
 import org.archive.hadoop.pig.ZipNumPartitioner;
-import org.archive.hadoop.pig.ZipNumRecordReader;
 
 public class MergeCluster implements Tool {
 	
@@ -44,19 +41,7 @@ public class MergeCluster implements Tool {
 	}
 	
 	
-	public static class ZipNumInputFormat extends NLineInputFormat
-	{
-		@SuppressWarnings({ "unchecked", "rawtypes" })
-		@Override
-		public RecordReader createRecordReader(
-				InputSplit genericSplit, TaskAttemptContext context)
-				throws IOException {
-			
-			return new ZipNumRecordReader();
-		}
-	}
-	
-	protected int runMerge(String inputPath, String outputPath, int numOutputParts, int numLinesPerInputSplit) throws IOException, ClassNotFoundException, InterruptedException
+	protected int runMerge(String inputPath, String outputPath, String splitPath, int numOutputParts, int numLinesPerInputSplit) throws IOException, ClassNotFoundException, InterruptedException
 	{		
 		Job job = new Job(getConf(), "cdx-sort-merge");
 		
@@ -68,8 +53,12 @@ public class MergeCluster implements Tool {
 			NLineInputFormat.setNumLinesPerSplit(job, numLinesPerInputSplit);
 		}
 		
-		Path[] parsedPaths = FileInputFormat.getInputPaths(job);
-		conf.set(ZipNumPartitioner.ZIPNUM_PARTITIONER_CLUSTER, parsedPaths[0].toString());
+		if (splitPath == null) {
+			Path[] parsedPaths = FileInputFormat.getInputPaths(job);
+			conf.set(ZipNumPartitioner.ZIPNUM_PARTITIONER_CLUSTER, parsedPaths[0].toString());
+		} else {
+			conf.set(ZipNumPartitioner.ZIPNUM_PARTITIONER_CLUSTER, splitPath);	
+		}
  
 		FileOutputFormat.setOutputPath(job, new Path(outputPath));
  
@@ -87,6 +76,6 @@ public class MergeCluster implements Tool {
 
 	@Override
 	public int run(String[] args) throws Exception {
-		return runMerge(args[0], args[1], 10, 500);
+		return runMerge(args[0], args[1], args[2], 10, 500);
 	}
 }

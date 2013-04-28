@@ -7,8 +7,6 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.input.NLineInputFormat;
 import org.apache.pig.CollectableLoadFunc;
@@ -96,17 +94,7 @@ public class ZipNumLoader extends TextLoader implements IndexableLoadFunc, Colle
 	
 	@Override
 	public InputFormat getInputFormat() {
-		
-		return new NLineInputFormat()
-		{
-			@Override
-			public RecordReader createRecordReader(
-					InputSplit genericSplit, TaskAttemptContext context)
-					throws IOException {
-				
-				return new ZipNumRecordReader();
-			}		
-		};
+		return new ZipNumInputFormat();
 	}
 
 	@Override

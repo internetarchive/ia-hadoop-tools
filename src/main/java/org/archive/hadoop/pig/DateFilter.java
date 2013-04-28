@@ -39,6 +39,8 @@ public class DateFilter extends FirstPigJobOnlyFilter implements PathFilter
 	
 	public final static String DATE_OUTPUT_LOG = "org.archive.pig.filter.date.logfile";
 	
+	protected SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	
 	public final static String MTIME_VAR = "mtime";
 	
 	static enum CompareOp
@@ -187,12 +189,12 @@ public class DateFilter extends FirstPigJobOnlyFilter implements PathFilter
 			
 			if (dateStr1 != null) {
 				date1 = parseDateForParam(dateStr1);
-				writeLog("Date 1: " + date1.toString());
+				writeLog("Date 1", date1);
 			}
 			
 			if (dateStr2 != null) {
 				date2 = parseDateForParam(dateStr2);
-				writeLog("Date 2: " + date2.toString());
+				writeLog("Date 2", date2);
 			}
 		
 		} catch (Exception e) {
@@ -269,12 +271,10 @@ public class DateFilter extends FirstPigJobOnlyFilter implements PathFilter
 				}
 			}
 			
-			String msg = path.getName() + " (" + new Date(mtime).toString() + ")";
-			
 			if (isDir) {
-				LOGGER.info(msg);
+				LOGGER.info(path.getName() + " (" + dateFormat.format(new Date(mtime)) + ")");
 			} else {
-				writeLog(msg);
+				writeLog(path.getName(), new Date(mtime));
 			}
 			
 			return true;
@@ -286,7 +286,15 @@ public class DateFilter extends FirstPigJobOnlyFilter implements PathFilter
 		return false;
 	}
 	
-	private void writeLog(String string) {
+	private void writeLog(String name, Date date) {
+		
+		StringBuilder sb = new StringBuilder(name);
+		sb.append(": (");
+		sb.append(dateFormat.format(date));
+		sb.append(")");
+		
+		String string = sb.toString();
+		
 		LOGGER.info(string);
 		
 		if (fileWriter != null) {
