@@ -40,7 +40,8 @@ public class ZipNumRecordReader implements RecordReader<LongWritable, Text> {
 		
 		params = new ZipNumParams();
 		params.setMaxAggregateBlocks(0);
-		params.setMaxBlocks(0);		
+		params.setMaxBlocks(0);
+		
 		cdxReader = cluster.getCDXIterator(new RecordReaderValueIterator(inner), params);
 	}
 	
