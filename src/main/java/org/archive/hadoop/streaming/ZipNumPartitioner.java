@@ -42,11 +42,11 @@ public class ZipNumPartitioner<K> implements Partitioner<K, Text> {
 		//String valueURL = (String)key.getValueAsPigType();
 		//String valueURL = (key.isNull() ? value.toString() : key.toString());
 		
-//		int spaceIndex = valueURL.indexOf(' ');
-//		
-//		if (spaceIndex >= 0) {
-//			valueURL = valueURL.substring(0, spaceIndex);
-//		}
+		int spaceIndex = valueURL.indexOf(' ');
+		
+		if (spaceIndex >= 0) {
+			valueURL = valueURL.substring(0, spaceIndex);
+		}
 		
 //		key.setIndex((byte)0);
 //		value.setIndex((byte)0);
