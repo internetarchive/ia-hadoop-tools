@@ -56,6 +56,8 @@ public class PetaboxClient {
 	protected int metadataConnectionTimeout = 10*1000; // milliseconds
 	protected int metadataSocketTimeout = 5*1000; // milliseconds
 	
+	protected int bufferSize = 8192;
+	
 	/**
 	 * if true, PetaboxFileSystem makes up empty item when Metadata API tells it's non-existent,
 	 * instead of throwing FileNotFoundException.
@@ -256,6 +258,10 @@ public class PetaboxClient {
 		protected long pos;
 		protected long endpos;
 		protected InputStream in;
+		protected byte[] buffer;
+		protected int bufpos;
+		protected int bufend;
+		
 		/**
 		 * maximum length of seeking by reading off instead of re-opening resource
 		 * with new Range request. optimal value depends on the relative cost of
@@ -275,6 +281,20 @@ public class PetaboxClient {
 			this.pos = offset;
 			this.endpos = -1;
 			this.in = null;
+			if (bufferSize > 0) {
+				buffer = new byte[bufferSize];
+			}
+		}
+		// it is critical to override this method for GZIP decompression
+		// to always work correctly on block-compressed (concatenated) file.
+		// InputStream.available() always returns 0, which makes GZIP decompression
+		// to assume there's no more concatenated blocks when there are <= 26
+		// bytes left in its decompression buffer. see GZIPInputStream.readTrailer()
+		// for details.
+		@Override
+		public int available() throws IOException {
+			// as long as it is > 0, return value itself doesn't mean much.
+			return pos < endpos ? 1 : 0;
 		}
 		// Seekable
 		public long getPos() throws IOException {
@@ -285,6 +305,15 @@ public class PetaboxClient {
 			if (in != null) {
 				if (pos >= this.pos && pos <= this.pos + SMALL_GAP) {
 					int skiplen = (int)(pos - this.pos);
+					if (buffer != null) {
+						if (bufpos + skiplen < bufend) {
+							// new position is within the buffer
+							bufpos += skiplen;
+							skiplen = 0;
+						} else {
+							skiplen -= (bufend - bufpos);
+						}
+ 					}
 					byte[] buffer = new byte[4096];
 					while (skiplen > 0) {
 						// TODO: should we let IOException from read to bubble up, or catch it and have
@@ -390,6 +419,10 @@ public class PetaboxClient {
 				}
 			} while (entity == null);
 			in = entity.getContent();
+			if (buffer != null) {
+				bufpos = buffer.length;
+				bufend = 0;
+			}
 		}
 		@Override
 		public void close() throws IOException {
@@ -404,7 +437,19 @@ public class PetaboxClient {
 				if (in == null) open();
 				int b;
 				try {
-					b = in.read();
+					if (buffer == null) {
+						b = in.read();
+					} else {
+						if (bufpos >= buffer.length) {
+							bufend = in.read(buffer);
+							bufpos = 0;
+						}
+						if (bufpos >= bufend) {
+							b = -1;
+						} else {
+							b = (buffer[bufpos++] & 0xff);
+						}
+					}
 				} catch (ConnectionClosedException ex) {
 					// sender closed socket, probably for long idle period.
 					LOG.info("connection closed unexpectedly", ex);
@@ -519,10 +564,10 @@ public class PetaboxClient {
 				authority = petaboxHost;
 			uri = new URI(scheme, authority, uri.getPath(), uri.getQuery(), uri.getFragment());
 		}
-		return new HttpInputStream(uri, 0, offset);
+		return new HttpInputStream(uri, bufferSize, offset);
 	}
 	public HttpInputStream openURI(URI uri) throws URISyntaxException {
-		return openURI(uri, 0);
+		return openURI(uri, bufferSize);
 	}
 
 	/**
@@ -533,7 +578,7 @@ public class PetaboxClient {
 	 */
 	protected HttpInputStream openPath(String urlpath, long offset) throws URISyntaxException {
 		URI uri = new URI(petaboxProtocol, petaboxHost, urlpath, null);
-		return new HttpInputStream(uri, 0, offset);
+		return new HttpInputStream(uri, bufferSize, offset);
 	}
 	protected HttpInputStream openPath(String urlpath) throws URISyntaxException {
 		return openPath(urlpath, 0);
