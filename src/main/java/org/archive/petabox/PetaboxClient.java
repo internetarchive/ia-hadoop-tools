@@ -567,7 +567,7 @@ public class PetaboxClient {
 		return new HttpInputStream(uri, bufferSize, offset);
 	}
 	public HttpInputStream openURI(URI uri) throws URISyntaxException {
-		return openURI(uri, bufferSize);
+		return openURI(uri, 0);
 	}
 
 	/**
