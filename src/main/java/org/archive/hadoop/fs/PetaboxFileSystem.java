@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpMessage;
 import org.apache.http.client.HttpClient;
 import org.archive.hadoop.util.HadoopUtil;
 import org.archive.petabox.CookieFilePetaboxCredentialProvider;
@@ -100,6 +99,39 @@ public class PetaboxFileSystem extends FileSystem {
 		}
 	}
 
+	public static class ConfigurationPetaboxCredentialProvider implements PetaboxCredentialProvider {
+		private String user;
+		private String sig;
+		public ConfigurationPetaboxCredentialProvider(Configuration conf, String confbase) {
+			user = conf.get(confbase + ".user");
+			sig = conf.get(confbase + ".sig");
+			// if not set as configuration property, try loading ~/.iaauth
+			if (user == null) {
+				CookieFilePetaboxCredentialProvider provider = new CookieFilePetaboxCredentialProvider();
+				user = provider.getUser();
+				sig = provider.getSignature();
+				if (user == null) {
+					LOG.warn("could not load petabox credentials with " + provider.getClass().getName());
+				} else {
+					LOG.info("loaded petabox credentials for user \"" + user + "\" with " +
+							provider.getClass().getName());
+					conf.set(confbase + ".user", user);
+					conf.set(confbase + ".sig", sig);
+				}
+			} else {
+				LOG.info("loaded petabox credentials for user \"" + user + "\" from Hadoop configuration");
+			}
+		}
+		@Override
+		public String getUser() {
+			return user;
+		}
+		@Override
+		public String getSignature() {
+			return sig;
+		}
+	}
+	
 	@Override
 	public void initialize(URI name, final Configuration conf) throws IOException {
 		super.initialize(name, conf);
@@ -114,41 +146,10 @@ public class PetaboxFileSystem extends FileSystem {
 		this.pbclient = new PetaboxClient(pbconf);
 		this.pbclient.setPetaboxHost(fsUri.getAuthority());
 		this.pbclient.setReferer(getHadoopJobInfo());
-		this.pbclient.setCredentialProvider(new PetaboxCredentialProvider() {
-			private String user = conf.get(confbase + ".user");
-			private String sig = conf.get(confbase + ".sig");
-			private PetaboxCredentialProvider provider = new CookieFilePetaboxCredentialProvider();
-			/**
-			 * read user credentials from ~/.iaauth file with IA cookies.
-			 */
-			private void getCredentials() {
-				this.user = provider.getUser();
-				if (this.user != null) {
-					conf.set("fs."+fsUri.getScheme()+".user", this.user);
-				}
-				this.sig = provider.getSignature();
-				if (this.sig != null) {
-					conf.set("fs."+fsUri.getScheme()+".sig", this.sig);
-				}
-				if (this.user == null || this.sig == null) {
-					LOG.warn("did not load petabox authentication from cookies file");
-				}
-			}
-			@Override
-			public String getUser() {
-				if (user == null)
-					getCredentials();
-				return user;
-			}
-
-			@Override
-			public String getSignature() {
-				if (user == null)
-					getCredentials();
-				return sig;
-			}
-		});
-
+		// loads credentials from cookie file if not set in configuration. loaded credentials
+		// are put into Configuration to make it available in MR tasks. this may not work well
+		// in non-Pig environment, where PBFS is not instantiated in submitting host.
+		this.pbclient.setCredentialProvider(new ConfigurationPetaboxCredentialProvider(conf, confbase));
 
 		this.urlTemplate = conf.get(confbase + ".url-template");
 
@@ -240,10 +241,6 @@ public class PetaboxFileSystem extends FileSystem {
 			}
 		}
 		return md;
-	}
-
-	public void setupRequest(HttpMessage msg) {
-		pbclient.setupRequest(msg);
 	}
 
 	/* (non-Javadoc)

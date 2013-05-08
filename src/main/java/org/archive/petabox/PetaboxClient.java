@@ -44,10 +44,6 @@ public class PetaboxClient {
 		this.referer = referer;
 	}
 
-	// authentication tokens
-	protected String user;
-	protected String sig;
-
 	protected int maxRetries = 10;
 	protected int retryDelay = 2000; // milliseconds
 	protected int connectionTimeout = 60*1000;
@@ -212,10 +208,12 @@ public class PetaboxClient {
 
 	public void addAuthCookies(HttpMessage msg) {
 		StringBuilder value = new StringBuilder();
+		String user = credentialProvider != null ? credentialProvider.getUser() : null;
 		if (user != null) {
 			value.append("logged-in-user=").append(user).append("; ");
 			LOG.debug("logged-in-user=" + user);
 		}
+		String sig = credentialProvider != null ? credentialProvider.getSignature() : null;
 		if (sig != null) {
 			value.append("logged-in-sig=").append(sig);
 			LOG.debug("logged-in-sig=" + sig);
@@ -324,8 +322,7 @@ public class PetaboxClient {
 					}
 				} else {
 					// moving backward or gap is larger than adequate for seek-by-reading
-					in.close();
-					in = null;
+					close();
 				}
 			}
 			this.pos = pos;
@@ -453,13 +450,16 @@ public class PetaboxClient {
 				} catch (ConnectionClosedException ex) {
 					// sender closed socket, probably for long idle period.
 					LOG.info("connection closed unexpectedly", ex);
+					// TODO: not sure if we can assume connection has been returned
+					// to the pool and there's no need to call in.close(). assuming
+					// we need to call in.close().
 					b = -1;
 				}
 				if (b == -1) {
 					// if receiver/sender closed socket prematurely, try reopening.
 					if (endpos >= 0 && pos < endpos) {
 						LOG.info("socket closed prematurely. rereading from " + pos);
-						in = null;
+						close();
 						continue;
 					}
 					return b;
