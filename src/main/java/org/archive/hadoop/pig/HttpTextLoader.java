@@ -46,6 +46,7 @@ public class HttpTextLoader extends TextLoader {
 	protected final static String NUM_SPLIT_PARAM = "&numSplits=";
 	
 	protected final static String NUM_LINES_HEADER_FIELD = "X-Cluster-Num-Lines";
+	protected final static String CLUSTER_URI_HEADER_FIELD = "X-Cluster-Uri";
 	
 	public HttpTextLoader()
 	{
@@ -146,7 +147,8 @@ public class HttpTextLoader extends TextLoader {
 			int totalLineCount = Integer.parseInt(conf.get(HTTP_TEXTLOADER_MAX_LINES, "-1"));
 			
 			if (totalLineCount == -1) {
-				totalLineCount = queryLineCount(location);
+				totalLineCount = queryLineCount(location, conf);
+				
 				conf.set(HTTP_TEXTLOADER_MAX_LINES, String.valueOf(totalLineCount));
 			}
 			
@@ -163,7 +165,7 @@ public class HttpTextLoader extends TextLoader {
 		LOGGER.info("setLocation - " + numSplits + " " + location);
 	}
 	
-	protected int queryLineCount(String url)
+	protected int queryLineCount(String url, Configuration conf)
 	{
 		HttpURLConnection conn = null;
 		int numLines = 0;
@@ -176,6 +178,12 @@ public class HttpTextLoader extends TextLoader {
 			conn.connect();
 			
 			numLines = conn.getHeaderFieldInt(NUM_LINES_HEADER_FIELD, 0);
+			
+			String clusterUri = conn.getHeaderField(CLUSTER_URI_HEADER_FIELD);
+			
+			if (clusterUri != null) {
+				conf.set(HTTP_TEXTLOADER_ZIPNUM_CLUSTER, clusterUri);
+			}
 			
 		} catch (IOException io) {
 			io.printStackTrace();

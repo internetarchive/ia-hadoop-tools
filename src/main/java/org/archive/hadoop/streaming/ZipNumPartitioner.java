@@ -51,6 +51,7 @@ public class ZipNumPartitioner implements Partitioner<Text, Text> {
 		}
 		
 		int index = linSearchSplits(searchKey);
+		//index = (int)(Math.random() * 5);
 		return index;
 	}
 	
@@ -125,7 +126,6 @@ public class ZipNumPartitioner implements Partitioner<Text, Text> {
 		try {
 			summary = new SortedTextFile(clusterSummary);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
