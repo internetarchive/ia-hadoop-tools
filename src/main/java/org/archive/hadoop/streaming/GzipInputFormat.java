@@ -35,7 +35,7 @@ public class GzipInputFormat extends TextInputFormat {
 		long start = split.getStart();
 		long end = start + split.getLength();
 		final Path file = split.getPath();
-		
+		end  = Long.MAX_VALUE;
 //		compressionCodecs = new CompressionCodecFactory(job);
 //		final CompressionCodec codec = compressionCodecs.getCodec(file);
 
