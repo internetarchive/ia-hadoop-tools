@@ -20,8 +20,9 @@ public class HDFSTouch implements Tool {
 	public final static String TMP_FILENAME = ".tmp_touch_latest";
 	
 	public final static String FORMAT_STR = "yyyy-MM-dd HH:mm:ss";
+	public final static String HTTP_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
 	
-	protected SimpleDateFormat hadoopStatFormat = new SimpleDateFormat(FORMAT_STR);
+	protected SimpleDateFormat formats[] = { new SimpleDateFormat(FORMAT_STR), new SimpleDateFormat(HTTP_FORMAT) };
 	
 	
 	public static void main(String[] args) throws Exception {
@@ -41,6 +42,28 @@ public class HDFSTouch implements Tool {
 		System.err.println("Usage: " + TOOL_NAME + "[ -d ] HDFS_URL <" + FORMAT_STR + ">");
 		System.err.println("Updated the mtime and atime on the specified hdfs path to current time, or optional timestamp");
 		return code;
+	}
+	
+	protected long parseFormats(String arg)
+	{
+		long mtime = -1;
+		
+		for (SimpleDateFormat format : formats) {
+			try {
+				mtime = format.parse(arg).getTime();
+				return mtime;
+				
+			} catch (Exception exc) {
+				
+			}
+		}
+		
+		if (mtime == -1) {
+			System.err.println("Error parsing timestamp: " + arg + "\nExpected format: " + FORMAT_STR + " or " + HTTP_FORMAT);
+			mtime = System.currentTimeMillis();
+		}
+		
+		return mtime;
 	}
 
 	public int run(String[] args) throws Exception {
@@ -74,11 +97,7 @@ public class HDFSTouch implements Tool {
 		long mtime = System.currentTimeMillis();
 		
 		if (args.length >= 3) {
-			try {
-				mtime = hadoopStatFormat.parse(args[2]).getTime();
-			} catch (Exception exc) {
-				System.err.println("Error parsing timestamp: " + args[2] + "\nExpected format: " + FORMAT_STR);
-			}
+			mtime = parseFormats(args[2]);
 		}
 		
 		long atime = mtime;		
