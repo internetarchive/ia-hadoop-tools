@@ -50,7 +50,10 @@ public class CookieFilePetaboxCredentialProvider implements
   }
   protected void readCredential() {
     File cf = cookieFile != null ? cookieFile : getDefautlFile();
-    if (!cf.canRead()) return;
+    if (!cf.canRead()) {
+    	LOG.info(cf + ": cannot read");
+    	return;
+    }
     try {
       Reader r = new FileReader(cf);
       BufferedReader br = new BufferedReader(r);
@@ -60,7 +63,7 @@ public class CookieFilePetaboxCredentialProvider implements
 	  if (line.startsWith("#")) continue;
 	  String[] fields = line.split("\\s+");
 	  if (fields.length < 7) continue;
-	  // XXX this menas this class works only against archive.org
+	  // XXX this means this class works only against archive.org
 	  if (!fields[0].equals(".archive.org")) continue;
 	  if (fields[5].equals("logged-in-user")) {
 	    this.cachedUser = fields[6];

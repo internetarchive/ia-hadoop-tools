@@ -32,7 +32,7 @@ public class DateTime14ToTimestamp extends EvalFunc<Long> {
     } else if (dt.length() == 17) {
       df = new SimpleDateFormat("yyyyMMddHHmmssSSS");
     } else {
-      throw new IllegalArgumentException("expects String of length 14 or 17");
+      throw new IllegalArgumentException("expects String of length 14 or 17 (got \"" + dt + "\")");
     }
     try {
       Date date = df.parse(dt);

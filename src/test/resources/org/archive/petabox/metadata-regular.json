@@ -1,0 +1,11 @@
+{"created":1366322173,
+"d1":"ia601201.us.archive.org",
+"d2":"ia701201.us.archive.org",
+"dir":"/7/items/wide00006",
+"files":[{"name":"logo.jpg_meta.txt","source":"original","format":"Metadata","mtime":"1345834543","size":"836","md5":"2656cc1fcb9d24a6e54c6f46fd448624","crc32":"92a010b5","sha1":"5d088b9156a9e4bb0b59a84253300b6bb8c59843"},{"name":"logo.jpg","source":"original","format":"JPEG","mtime":"1345834543","size":"6958","md5":"64d90dbd960e10269d85f131fe3a9a6c","crc32":"1cc8ec1c","sha1":"13a468f7543fde102797ed82e0bb7d16b846edb5","private":"true"},{"name":"logo_thumb.jpg","source":"derivative","format":"JPEG Thumb","original":"logo.jpg","mtime":"1345836865","size":"2331","md5":"de5c79c62f286826a5960b33eadb403a","crc32":"a992fca7","sha1":"ce8a1808120179c93a0367727b49f29d88988d3a","private":"true"},{"name":"wide00006_meta.xml","source":"original","format":"Metadata","mtime":"1366322172","size":"786","md5":"1dc231a834890bbb32b43b498722d449","crc32":"f6ff3284","sha1":"0ee52e25b982e9b968a28032365aa35bc4fb34d6"},{"name":"wide00006_files.xml","source":"original","format":"Metadata","md5":"1a46fba807a939f2e2cdf486075b5897"}],
+"files_count":5,
+"item_size":10911,
+"metadata":{"identifier":"wide00006","access-restricted":"true","description":"Web wide crawl with initial seedlist and crawler configuration from September 2012.","hidden":"true","mediatype":"collection","title":"Wide Crawl started September 2012","collection":["widecrawl","webwidecrawl","web"],"public-format":["Metadata","DAT, Symlink Instructions"],"publicdate":"2012-08-24 18:55:37","uploader":"alexis@archive.org","addeddate":"2012-08-24 18:55:37","num_recent_reviews":"5","num_top_dl":"5"},
+"server":"ia701201.us.archive.org",
+"uniq":917954058,
+"updated":1366340046}
