@@ -19,7 +19,7 @@ import org.apache.hadoop.mapred.lib.CombineFileRecordReader;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.archive.util.zip.OpenJDK7GZIPInputStream;
 
-public class GzipInputFormat extends CombineFileInputFormat<LongWritable, Text> {
+public class GzipInputFormat extends CombineFileInputFormat<Text, Text> {
 
 	@Override
 	protected boolean isSplitable(FileSystem fs, Path file) {
@@ -27,16 +27,17 @@ public class GzipInputFormat extends CombineFileInputFormat<LongWritable, Text> 
 	}
 
 	@Override
-	public RecordReader<LongWritable, Text> getRecordReader(
+	public RecordReader<Text, Text> getRecordReader(
 			InputSplit split, JobConf job, Reporter reporter)
 			throws IOException {
 		
-		 return new CombineFileRecordReader<LongWritable, Text>(job, (CombineFileSplit) split, reporter, (Class)GzipSingleFileRecordReader.class);
+		 return new CombineFileRecordReader<Text, Text>(job, (CombineFileSplit) split, reporter, (Class)GzipSingleFileRecordReader.class);
 	}
 	
-	public static class GzipSingleFileRecordReader implements RecordReader<LongWritable, Text>
+	public static class GzipSingleFileRecordReader implements RecordReader<Text, Text>
 	{
 		final LineRecordReader reader;
+		LongWritable longKey;
 		
 		public GzipSingleFileRecordReader(CombineFileSplit split, Configuration conf, Reporter reporter, Integer index) throws IOException
 		{
@@ -57,16 +58,18 @@ public class GzipInputFormat extends CombineFileInputFormat<LongWritable, Text> 
 		    InputStream in = new OpenJDK7GZIPInputStream(fileIn);
 		    
 			reader = new LineRecordReader(in, 0, Long.MAX_VALUE, conf, recordDelimiter);
+			longKey = reader.createKey();
 		}
 
 		@Override
-		public boolean next(LongWritable key, Text value) throws IOException {
-			return reader.next(key, value);
+		public boolean next(Text key, Text value) throws IOException {
+			value.set("");
+			return reader.next(longKey, key);
 		}
 
 		@Override
-		public LongWritable createKey() {
-			return reader.createKey();
+		public Text createKey() {
+			return new Text();
 		}
 
 		@Override
