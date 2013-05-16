@@ -49,9 +49,8 @@ public class GzipInputFormat extends CombineFileInputFormat<Text, Text> {
 			final Path file = split.getPath(index);
 			currPath = file.toString();
 			
-			currAttempt = TaskAttemptID.forName(conf.get("mapred.task.id")).getId();
-			
 			try {
+				currAttempt = TaskAttemptID.forName(conf.get("mapred.task.id")).getId();
 			
 				FileSystem fs = file.getFileSystem(conf);
 	
@@ -69,9 +68,9 @@ public class GzipInputFormat extends CombineFileInputFormat<Text, Text> {
 			    
 				reader = new LineRecordReader(in, 0, Long.MAX_VALUE, conf, recordDelimiter);
 				longKey = reader.createKey();
-			} catch (IOException io) {
+			} catch (Exception e) {
 				if (currAttempt < MAX_ALLOW_FAILURES) {
-					throw io;
+					throw new IOException("Failed init for: " + currPath, e);
 				}
 			}
 		}
@@ -86,9 +85,9 @@ public class GzipInputFormat extends CombineFileInputFormat<Text, Text> {
 			try {
 				value.clear();
 				return reader.next(longKey, key);
-			} catch (IOException io) {
+			} catch (Exception e) {
 				if (currAttempt < MAX_ALLOW_FAILURES) {
-					throw new IOException("Failed reading from " + currPath, io);	
+					throw new IOException("Failed reading from " + currPath, e);	
 				} else {
 					key.clear();
 					return false;
@@ -103,74 +102,34 @@ public class GzipInputFormat extends CombineFileInputFormat<Text, Text> {
 
 		@Override
 		public Text createValue() {
+			if (reader == null) {
+				return new Text();
+			}
 			return reader.createValue();
 		}
 
 		@Override
 		public long getPos() throws IOException {
+			if (reader == null) {
+				return 0;
+			}
+			
 			return reader.getPos();
 		}
 
 		@Override
 		public void close() throws IOException {
-			reader.close();			
+			if (reader != null) {
+				reader.close();
+			}
 		}
 
 		@Override
 		public float getProgress() throws IOException {
+			if (reader == null) {
+				return 0;
+			}
 			return reader.getProgress();
 		}
 	}
-		
-//	public RecordReader<LongWritable, Text> getRecordReader(
-//			InputSplit genericSplit, JobConf job, Reporter reporter)
-//			throws IOException {
-//		
-//		CombineFileSplit split = (CombineFileSplit)genericSplit;
-//		
-//		Vector<InputStream> vec = new Vector<InputStream>();
-//		
-//		for (Path path : split.getPaths()) {
-//			FileSystem fs = path.getFileSystem(job);
-//			FSDataInputStream fileIn = fs.open(path);
-//			vec.add(fileIn);
-//		}
-//		
-//		InputStream in = new SequenceInputStream(vec.elements());
-//		
-////		long start = split.getStart();
-////		long end = start + split.getLength();
-////		final Path file = split.getPath();
-////		
-//////		compressionCodecs = new CompressionCodecFactory(job);
-//////		final CompressionCodec codec = compressionCodecs.getCodec(file);
-////
-////		// open the file and seek to the start of the split
-////		FSDataInputStream fileIn = fs.open(split.getPath());
-////		
-////		boolean skipFirstLine = false;
-////		
-////		InputStream in = new OpenJDK7GZIPInputStream(fileIn);
-////		
-////		if (start != 0) {
-////			skipFirstLine = true;
-////			--start;
-////			fileIn.seek(start);
-////		}
-//		
-//	    String delimiter = job.get("textinputformat.record.delimiter");
-//	    byte[] recordDelimiter = null;
-//	    if (null != delimiter) {
-//	    	recordDelimiter = delimiter.getBytes();
-//	    }
-//		
-////		if (skipFirstLine) { // skip first line and re-establish "start".
-////			LineRecordReader.LineReader reader = new LineReader(in, job, recordDelimiter);
-////			start += reader.readLine(new Text(), 0,
-////					(int) Math.min((long) Integer.MAX_VALUE, end - start));
-////		}		
-//		
-//		return new LineRecordReader(in, 0, Long.MAX_VALUE, job, recordDelimiter);
-//	}
-
 }
