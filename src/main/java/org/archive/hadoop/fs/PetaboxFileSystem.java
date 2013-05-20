@@ -49,6 +49,12 @@ import org.archive.petabox.PetaboxCredentialProvider;
  */
 public class PetaboxFileSystem extends FileSystem {
 	private static Log LOG = LogFactory.getLog(PetaboxFileSystem.class);
+	
+	/**
+	 * URL path prefix for downloading a file in an item.
+	 */
+	public static final String DOWNLOAD_PREFIX = "/serve";
+	
 	protected URI fsUri;
 	private Path cwd = new Path("/");
 
@@ -443,7 +449,7 @@ public class PetaboxFileSystem extends FileSystem {
 	 */
 	protected URI getRealURI(URI uri) throws URISyntaxException {
 		if (urlTemplate == null) {
-			return new URI("http", fsUri.getAuthority(), "/download" + uri.getPath(), null);
+			return new URI("http", fsUri.getAuthority(), DOWNLOAD_PREFIX + uri.getPath(), null);
 		}
 		String path = uri.getPath(); // should be in /ITEM/FILE format.
 		StringBuffer sb = new StringBuffer();
