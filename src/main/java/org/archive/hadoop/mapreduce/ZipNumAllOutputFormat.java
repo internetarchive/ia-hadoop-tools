@@ -65,7 +65,7 @@ public class ZipNumAllOutputFormat extends FileOutputFormat<Text, Text> {
 //			return new ZipNumRecordWriter(count, mainOut, summaryOut);
 			return new ZipNumAllShardRecordWriter(count, mainOut, summaryOut, partitionName);
 		} else {
-			return new OvercrawlZipNumRecordWriter(count,dayLimit, mainOut, summaryOut);
+			return new ZipNumAllShardRecordWriter(count, mainOut, summaryOut, partitionName);
 		}
 	}
 
