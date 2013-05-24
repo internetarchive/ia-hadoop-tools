@@ -19,9 +19,9 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigSplit;
-import org.apache.pig.builtin.TextLoader;
+import org.apache.pig.builtin.PigStorage;
 
-public class HttpTextLoader extends TextLoader {
+public class HttpTextLoader extends PigStorage {
 	
 	private final static Logger LOGGER =
 		Logger.getLogger(HttpTextLoader.class.getName());
