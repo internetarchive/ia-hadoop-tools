@@ -586,7 +586,7 @@ public class PetaboxClient {
 	/**
 	 * 
 	 * @param path designates a file to download in /IDENTIFIER/FILE format.
-	 * @return
+	 * @return HttpInputStream
 	 * @throws URISyntaxException if path is illegal as URI path
 	 */
 	public HttpInputStream openDownload(String path) throws URISyntaxException {
@@ -594,6 +594,21 @@ public class PetaboxClient {
 	}
 	public HttpInputStream openDownload(String path, long offset) throws URISyntaxException {
 		return openPath((path.startsWith("/") ? "/download" : "/download/") + path, offset);
+	}
+	
+	/**
+	 * open HttpInputStream for reading an item file {@code path} reliably. in contrast to
+	 * {@link #openDownload(String, long)}, this method opens the file through {@code /serve}
+	 * URL so as not to increment download counter.
+	 * @param path designates a file to download in /IDENTIFIER/FILE format.
+	 * @return HttpInputStream
+	 * @throws URISyntaxException if path is illegal as URI path.
+	 */
+	public HttpInputStream openServe(String path) throws URISyntaxException {
+		return openServe(path, 0);
+	}
+	public HttpInputStream openServe(String path, long offset) throws URISyntaxException {
+		return openPath((path.startsWith("/") ? "/serve" : "/serve/") + path, offset);
 	}
 	
 	// TEMPORARY - subject to refactoring in the near future.
