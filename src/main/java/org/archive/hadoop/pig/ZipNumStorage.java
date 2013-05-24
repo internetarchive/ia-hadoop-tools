@@ -29,7 +29,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.pig.StoreFunc;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
-import org.archive.hadoop.mapreduce.ZipNumAllOutputFormat;
+import org.archive.hadoop.mapreduce.ZipNumOutputFormat;
 
 /**
  * Very simple/minimal StoreFunc to write {key,value} pairs into IA's
@@ -55,7 +55,7 @@ public class ZipNumStorage extends StoreFunc
   
   public OutputFormat<Text, Text> getOutputFormat() throws IOException
   {
-    return new ZipNumAllOutputFormat(numLines);
+    return new ZipNumOutputFormat(numLines);
   }
   
   public void setStoreLocation( String location, Job job ) throws IOException

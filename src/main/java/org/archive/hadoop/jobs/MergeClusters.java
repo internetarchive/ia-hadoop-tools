@@ -81,9 +81,6 @@ public class MergeClusters implements Tool {
 					globalCDX = true;
 				} else if ("--zip-num-output".equals(args[i])) {
 					zipNumLines = Integer.parseInt(args[++i]);
-				} else if ("--day-limit".equals(args[i])) {
-					ZipNumOutputFormat.setZipNumOvercrawlDayCount(conf,
-							Integer.parseInt(args[++i]));
 				} else if ("--max-map-attempts".equals(args[i])) {
 					conf.setInt("mapred.map.max.attempts",Integer.parseInt(args[++i]));
 				} else if ("--delimiter".equals(args[i])) {
