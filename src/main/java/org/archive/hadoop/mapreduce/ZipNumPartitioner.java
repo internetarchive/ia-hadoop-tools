@@ -13,7 +13,7 @@ import org.archive.util.iterator.CloseableIterator;
 
 public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Configurable {
 	
-	public final static String ZIPNUM_PARTITIONER_CLUSTER = "pig.zipnum.partitioner.clusterSummary";
+	public final static String ZIPNUM_PARTITIONER_CLUSTER = "conf.zipnum.partitioner.clusterSummary";
 	
 	protected SortedTextFile summary = null;
 	
@@ -41,7 +41,7 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 			return 0;
 		}
 		
-		if ((splitList == null) || (splitList.size() != (numSplits - 1))) {
+		if (splitList == null) {
 			loadSplits(numSplits);
 		}
 				
@@ -92,6 +92,11 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 			
 			splitList = new ArrayList<String>();
 			
+			// Skip first line, don't need the beginning line here
+			if (splitIter.hasNext()) {
+				splitIter.next();
+			}			
+			
 			while (splitIter.hasNext()) {
 				String str = splitIter.next();
 				int keyEndIndex = str.indexOf(' ');
@@ -100,6 +105,10 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 				}
 				splitList.add(str);
 				System.out.println(str);
+			}
+			
+			if ((numSplits - 1) != splitList.size()) {
+				throw new RuntimeException("splitList size != " + (numSplits - 1));
 			}
 			
 		} catch (IOException e) {

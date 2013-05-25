@@ -90,7 +90,7 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
    * records, close the comrpression envelope and start another one; also write a summary line.
    */
   @Override
-  public synchronized void write( Text key, Text value ) throws IOException, InterruptedException
+  public synchronized void write( Text key, Text value ) throws IOException
   {
     if ( count == 0 )
       {

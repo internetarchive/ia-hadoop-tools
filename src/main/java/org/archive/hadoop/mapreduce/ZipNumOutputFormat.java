@@ -1,7 +1,6 @@
 package org.archive.hadoop.mapreduce;
 
 import java.io.IOException;
-import java.io.DataOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,7 +40,6 @@ public class ZipNumOutputFormat extends TextOutputFormat<Text, Text>
   public static final String DEFAULT_PART_MOD = "a-";
 
   public String partMod = "";
-  public int count;
 
   
   /**
@@ -49,23 +47,23 @@ public class ZipNumOutputFormat extends TextOutputFormat<Text, Text>
    */
   public ZipNumOutputFormat( )
   {
-    this( DEFAULT_ZIP_NUM_LINES );
+	  
   }
   
-  /**
-   * Construct a <code>ZipNumOutputFormat</code> and specify the number of lines per compressed envelope.
-   */
-  public ZipNumOutputFormat( int count )
-  {
-    this.count = count;
-  }
-
   /**
    * Set the number of lines per compressed envelope.
    */
   public static void setZipNumLineCount( Configuration conf, int count ) 
   {
     conf.setInt( ZIP_NUM_LINES_CONFIGURATION, count );
+  }
+  
+  public static int getZipNumLineCount( Configuration conf ) {
+    return conf.getInt(ZIP_NUM_LINES_CONFIGURATION, DEFAULT_ZIP_NUM_LINES);
+  }
+  
+  public static String getPartMod( Configuration conf ) {
+    return conf.get( ZIP_NUM_PART_MOD, DEFAULT_PART_MOD );
   }
   
   /**
@@ -76,9 +74,9 @@ public class ZipNumOutputFormat extends TextOutputFormat<Text, Text>
   {
     Configuration conf = context.getConfiguration();
 
-    count = conf.getInt( ZIP_NUM_LINES_CONFIGURATION, DEFAULT_ZIP_NUM_LINES );
+    int count = getZipNumLineCount(conf);
     
-    partMod = conf.get( ZIP_NUM_PART_MOD, DEFAULT_PART_MOD );
+    partMod = getPartMod(conf);
     String partitionName = getPartitionName( context );
     
     // Obtain the compression codec from the Hadoop environment.

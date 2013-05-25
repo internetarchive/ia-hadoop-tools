@@ -38,7 +38,7 @@ import org.archive.hadoop.mapreduce.ZipNumOutputFormat;
 public class ZipNumStorage extends StoreFunc
 {
   RecordWriter<Text, Text> writer;
-  protected int numLines = 3000;
+  protected int numLines = -1;
 
   Text key   = new Text();
   Text value = new Text();
@@ -55,11 +55,15 @@ public class ZipNumStorage extends StoreFunc
   
   public OutputFormat<Text, Text> getOutputFormat() throws IOException
   {
-    return new ZipNumOutputFormat(numLines);
+    return new ZipNumOutputFormat();
   }
   
   public void setStoreLocation( String location, Job job ) throws IOException
   {
+    if (numLines > 0) {
+    	ZipNumOutputFormat.setZipNumLineCount(job.getConfiguration(), numLines);
+    }
+    
     FileOutputFormat.setOutputPath( job, new Path(location) );
   }
 
