@@ -2,14 +2,12 @@ package org.archive.hadoop.mapreduce;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.mapreduce.RecordWriter;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
  * RecordWriter which produces "zipnum" output format.  This is fairly
@@ -103,8 +101,11 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
     
     // Write the output record to the compressing stream.
     compressing.write( key.getBytes(), 0, key.getLength() );
-    compressing.write( DELIMITER );
-    compressing.write( value.getBytes(), 0, value.getLength() );
+    
+    if (value.getLength() > 0) {
+      compressing.write( DELIMITER );
+      compressing.write( value.getBytes(), 0, value.getLength() );
+    }
     compressing.write( NEWLINE ); 
     
     count++;
