@@ -14,25 +14,25 @@ import org.apache.pig.builtin.TextLoader;
 
 public class PerMapTextLoader extends TextLoader {
 	
-//	Path sourcePath;
-//	Job currJob;
-//
-//	@Override
-//	public void setLocation(String location, Job job) throws IOException {
-//		currJob = job;
-//		super.setLocation(location, job);
-//	}
-//
-//	@Override
-//	public void prepareToRead(RecordReader reader, PigSplit split) {
-//    	sourcePath = ((FileSplit)split.getWrappedSplit()).getPath();
-//    	
-//    	if (currJob != null) {
-//    		currJob.getConfiguration().set("map.input.file", sourcePath.toString());
-//    	}
-//    	
-//    	super.prepareToRead(reader, split);
-//	}
+	Path sourcePath;
+	Job currJob;
+
+	@Override
+	public void setLocation(String location, Job job) throws IOException {
+		currJob = job;
+		super.setLocation(location, job);
+	}
+
+	@Override
+	public void prepareToRead(RecordReader reader, PigSplit split) {
+    	sourcePath = ((FileSplit)split.getWrappedSplit()).getPath();
+    	
+    	if (currJob != null) {
+    		currJob.getConfiguration().set("map.input.file", sourcePath.toString());
+    	}
+    	
+    	super.prepareToRead(reader, split);
+	}
 	
     @Override
     public InputFormat getInputFormat() {
