@@ -82,10 +82,33 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
     this.summary = summary;
     this.partitionName = partitionName;
   }
+  
+  /**
+   * get the key that will be written in the summary file
+   * currently this is the first 2 cdx fields, the url key and date
+   * 
+   * 
+   */
+  protected String getCdxSummaryKey(String cdx)
+  {
+	  int spaceIndex = cdx.indexOf(DELIMITER);
+
+	  if (spaceIndex >= 0) {
+		  spaceIndex = cdx.indexOf(DELIMITER, spaceIndex + 1);
+	  }
+
+	  String summaryKey = ((spaceIndex >= 0) ? cdx.substring(0, spaceIndex) : cdx);
+		
+	  if (spaceIndex < 0) {
+		  System.err.println("POSSIBLY INVALID CDX LINE: " + cdx);
+	  }
+	  
+	  return summaryKey;
+   }
 
   /**
    * Write the key,value pair to the compressed output stream.  Once we write <code>limit</code>
-   * records, close the comrpression envelope and start another one; also write a summary line.
+   * records, close the compression envelope and start another one; also write a summary line.
    */
   @Override
   public synchronized void write( Text key, Text value ) throws IOException
@@ -96,16 +119,21 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
         //       'key' passed-in is modified by the caller.  So if we
         //       just keep a reference to the 'key', then those
         //       modifications will also apply to our 'startKey'.
-        startKey = new Text( key );
+    	String summaryKey = getCdxSummaryKey(key.getLength() > 0 ? key.toString() : value.toString());
+        startKey = new Text( summaryKey );
       }
     
     // Write the output record to the compressing stream.
-    compressing.write( key.getBytes(), 0, key.getLength() );
-    
-    if (value.getLength() > 0) {
-      compressing.write( DELIMITER );
-      compressing.write( value.getBytes(), 0, value.getLength() );
+    if (value.getLength() == 0) {
+        compressing.write( key.getBytes(), 0, key.getLength() );
+    } else if (key.getLength() == 0) {
+        compressing.write( value.getBytes(), 0, value.getLength() );
+    } else {
+        compressing.write( key.getBytes(), 0, key.getLength() );
+        compressing.write( DELIMITER );
+        compressing.write( value.getBytes(), 0, value.getLength() );        
     }
+ 
     compressing.write( NEWLINE ); 
     
     count++;
@@ -146,6 +174,7 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
     
     out.flush();
     out.close();
+    summary.close();
   }
   
   /**
@@ -172,7 +201,6 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
     summary.write( Long.toString( out.getPos() - oldPos ).getBytes("UTF-8") );
     summary.write( NEWLINE ); 
     summary.flush();
-    summary.close();
   }
   
   /**
