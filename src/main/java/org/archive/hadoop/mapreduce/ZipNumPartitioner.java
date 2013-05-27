@@ -1,21 +1,30 @@
 package org.archive.hadoop.mapreduce;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.archive.util.binsearch.SortedTextFile;
 import org.archive.util.iterator.CloseableIterator;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONTokener;
 
 public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Configurable {
 	
 	public final static String ZIPNUM_PARTITIONER_CLUSTER = "conf.zipnum.partitioner.clusterSummary";
+	public final static String ZIPNUM_PARTITIONER_JSON = "conf.zipnum.partitioner.jsonSplits";
 	
 	protected SortedTextFile summary = null;
+	protected String splitsFile = null;
 	
 	public ZipNumPartitioner()
 	{
@@ -32,10 +41,6 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 	}
 	
 	public int getPartition(String searchKey, int numSplits) {
-		
-		if (summary == null) {
-			return 0;
-		}
 		
 		if (numSplits <= 1) {
 			return 0;
@@ -88,6 +93,10 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 		CloseableIterator<String> splitIter = null;
 		
 		try {
+			if (summary == null) {
+				return;
+			}
+			
 			splitIter = summary.getSplitIterator(EMPTY_STRING, EMPTY_STRING, numSplits);
 			
 			splitList = new ArrayList<String>();
@@ -104,7 +113,7 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 					str = str.substring(0, keyEndIndex);
 				}
 				splitList.add(str);
-				System.out.println(str);
+				//System.out.println(str);
 			}
 			
 			if ((numSplits - 1) != splitList.size()) {
@@ -132,11 +141,50 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 	public void setConf(Configuration conf) {
 		String clusterSummary = conf.get(ZIPNUM_PARTITIONER_CLUSTER);
 		
-		try {
-			summary = new SortedTextFile(clusterSummary);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if (clusterSummary != null) {		
+			try {
+				summary = new SortedTextFile(clusterSummary);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return;
 		}
+		
+		splitsFile = conf.get(ZIPNUM_PARTITIONER_JSON);
+		
+		if (splitsFile != null) {
+			try {
+				loadJsonSplits(splitsFile, conf);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	protected void loadJsonSplits(String splitsFile, Configuration conf) throws IOException, JSONException
+	{
+		Path splitsPath = new Path(splitsFile);
+		FileSystem fs = splitsPath.getFileSystem(conf);
+		
+		FSDataInputStream inputStream = fs.open(splitsPath);
+		
+		JSONTokener tokener = new JSONTokener(new InputStreamReader(inputStream));
+		JSONArray root = new JSONArray(tokener);
+		
+		// 0th object is number of lines, actual split points are 1th index in the root array
+		JSONArray splitsArray = root.getJSONArray(1);
+		
+		// Assuming the first and last values of the array are empty lines
+		splitList = new ArrayList<String>(splitsArray.length() - 2);
+		
+		for (int i = 1; i < splitsArray.length() - 1; i++) {
+			String split = splitsArray.getString(i);
+			splitList.add(split);
+			System.out.println(split);
+		}
+		
+		inputStream.close();
 	}
 }
