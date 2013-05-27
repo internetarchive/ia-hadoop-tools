@@ -141,7 +141,7 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 	public void setConf(Configuration conf) {
 		String clusterSummary = conf.get(ZIPNUM_PARTITIONER_CLUSTER);
 		
-		if (clusterSummary != null) {		
+		if (clusterSummary != null) {
 			try {
 				summary = new SortedTextFile(clusterSummary);
 			} catch (IOException e) {
@@ -154,6 +154,11 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 		splitsFile = conf.get(ZIPNUM_PARTITIONER_JSON);
 		
 		if (splitsFile != null) {
+			// Don't reload multiple times
+			if (splitList != null) {
+				return;
+			}
+			
 			try {
 				loadJsonSplits(splitsFile, conf);
 			} catch (Exception e) {
@@ -182,7 +187,7 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 		for (int i = 1; i < splitsArray.length() - 1; i++) {
 			String split = splitsArray.getString(i);
 			splitList.add(split);
-			System.out.println(split);
+			//System.out.println(split);
 		}
 		
 		inputStream.close();
