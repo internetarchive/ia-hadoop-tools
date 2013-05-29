@@ -2,8 +2,6 @@ package org.archive.hadoop.streaming;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -26,7 +24,6 @@ public class CdxDedupReducer implements Reducer<Text, Text, Text, Text> {
 	}
 	
 	protected String lastCdx = null;
-	Pattern youtube = Pattern.compile("^com,youtube[,)].*/videoplayback([?]|.+&)id=([^&]+).*");
 
 	@Override
 	public void reduce(Text key, Iterator<Text> values,
@@ -44,27 +41,5 @@ public class CdxDedupReducer implements Reducer<Text, Text, Text, Text> {
 	    }
 	    
 	    lastCdx = cdx;
-	    
-		if (cdx.startsWith("com,youtube")) {
-			checkVideo(cdx, output);
-		}
-	}
-	
-	protected void checkVideo(String cdx, OutputCollector<Text, Text> output) throws IOException
-	{
-		String[] fields = cdx.split(" ");
-		
-		if (fields.length < 5) {
-			return;
-		}
-		
-		if (fields[4].equals("200") && fields[3].startsWith("video/")) {
-			Matcher m = youtube.matcher(cdx);
-			if (m.matches()) {
-				String result = m.replaceFirst("youtube,derived)/$2") + cdx.substring(fields[0].length());
-				output.collect(new Text(result), new Text());
-			}
-		}
-
 	}
 }
