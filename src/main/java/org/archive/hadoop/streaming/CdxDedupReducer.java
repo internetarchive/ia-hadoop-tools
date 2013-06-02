@@ -32,13 +32,25 @@ public class CdxDedupReducer implements Reducer<Text, Text, Text, Text> {
 		
 		String cdx = key.toString();
 		
-		if (lastCdx != null && lastCdx.equals(cdx)) {
+		if ((lastCdx != null) && lastCdx.equals(cdx)) {
 			return;
 		}
 		
-	    while (values.hasNext()) {
-	        output.collect(key, values.next());
-	    }
+//		String lastValue = null;
+//		
+//		while (values.hasNext()) {
+//			Text nextValue = values.next();
+//			String currValue = nextValue.toString();
+//			
+//			if ((lastValue != null) && !currValue.equals(lastValue)) {
+//				output.collect(key, nextValue);	
+//			}
+//			lastValue = currValue;
+//		}
+		// Only one value output per key, (value should be empty key)
+		if (values.hasNext()) {
+			output.collect(key, values.next());
+		}
 	    
 	    lastCdx = cdx;
 	}
