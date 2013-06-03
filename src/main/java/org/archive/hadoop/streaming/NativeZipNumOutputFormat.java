@@ -7,53 +7,40 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskID;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.archive.hadoop.util.PartitionName;
 
-public class ZipNumOutputFormat extends FileOutputFormat<Text, Text> {
-	private int count;
-	private static final int DEFAULT_ZIP_NUM_LINES = 3000;
-	private static final String ZIP_NUM_LINES_CONFIGURATION = "conf.zipnum.count";
-	private static final String ZIP_NUM_OVERCRAWL_CONFIGURATION = "conf.zipnum.overcrawl.daycount";
+public class NativeZipNumOutputFormat extends FileOutputFormat<Text, Text> {
+
 	
-	private static final String ZIP_NUM_PART_MOD = "conf.zipnum.partmod";
-	private static final String DEFAULT_PART_MOD = "a-";
-	private String partMod = "";
-
-	public ZipNumOutputFormat() {
-		this(DEFAULT_ZIP_NUM_LINES);
-	}
-
-	public ZipNumOutputFormat(int count) {
-		this.count = count;
-	}
 
 	public static void setZipNumLineCount(Configuration conf, int count) {
-		conf.setInt(ZIP_NUM_LINES_CONFIGURATION, count);
-	}
-
-	public static void setZipNumOvercrawlDayCount(Configuration conf, int count) {
-		conf.setInt(ZIP_NUM_OVERCRAWL_CONFIGURATION, count);
+		org.archive.hadoop.mapreduce.ZipNumOutputFormat.setZipNumLineCount(conf, count);
 	}
 
 	@Override
 	public RecordWriter<Text, Text> getRecordWriter(FileSystem ignored,
 			JobConf conf, String name, Progressable progress) throws IOException {
-
-
-		//Configuration conf = job.getConfiguration();
-		count = conf.getInt(ZIP_NUM_LINES_CONFIGURATION, DEFAULT_ZIP_NUM_LINES);
-		//int dayLimit = conf.getInt(ZIP_NUM_OVERCRAWL_CONFIGURATION, -1);
 		
-		partMod = conf.get(ZIP_NUM_PART_MOD, DEFAULT_PART_MOD);
+		int count = org.archive.hadoop.mapreduce.ZipNumOutputFormat.getZipNumLineCount(conf);
+		String partMod = org.archive.hadoop.mapreduce.ZipNumOutputFormat.getPartMod(conf);
 
-		String partitionName = getPartitionName(conf);
-		Path mainFile = getWorkFile(conf, partitionName + ".gz");
+		String partitionName = getPartitionName(conf, partMod);
+	    // Obtain the compression codec from the Hadoop environment.
+	    Class<? extends CompressionCodec> codecClass = getOutputCompressorClass( conf, GzipCodec.class );
+	    CompressionCodec codec = (CompressionCodec) ReflectionUtils.newInstance( codecClass, conf );
+	    // System.err.println( "Using codec:" + codec.toString() );
+
+	    // Use a file extension basd on the codec, don't hard-code it.
+	    Path mainFile = getWorkFile(conf, partitionName + codec.getDefaultExtension() );
 		Path summaryFile = getWorkFile(conf, partitionName + "-idx");
 		
 
@@ -64,7 +51,8 @@ public class ZipNumOutputFormat extends FileOutputFormat<Text, Text> {
 		FSDataOutputStream mainOut = mainFs.create(mainFile, false, buffSize, progress);
 		FSDataOutputStream summaryOut = summaryFs.create(summaryFile, false, buffSize, progress);
 		
-		return new ZipNumRecordWriter(count, mainOut, summaryOut, partitionName);
+		//return new ZipNumRecordWriter(count, mainOut, summaryOut, partitionName);
+	    return new org.archive.hadoop.streaming.NativeZipNumRecordWriter( codec, mainOut, summaryOut, partitionName, count );
 	}
 
 	/**
@@ -84,7 +72,7 @@ public class ZipNumOutputFormat extends FileOutputFormat<Text, Text> {
 		return FileOutputFormat.getTaskOutputPath(conf, partWithExt);
 	}
 	
-	public String getPartitionName(JobConf conf)
+	public String getPartitionName(JobConf conf, String partMod)
 	{
 		//TaskID taskId = conf.getTaskAttemptID().getTaskID();
 		TaskID taskId = TaskAttemptID.forName(conf.get("mapred.task.id")).getTaskID();
