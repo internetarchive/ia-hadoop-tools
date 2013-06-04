@@ -22,6 +22,7 @@ public class ZipNumOutputFormat extends FileOutputFormat<Text, Text> {
 	private static final String ZIP_NUM_OVERCRAWL_CONFIGURATION = "conf.zipnum.overcrawl.daycount";
 	
 	private static final String ZIP_NUM_PART_MOD = "conf.zipnum.partmod";
+	private static final String ZIP_NUM_CDX_HEADER = "conf.zipnum.cdxheader";	
 	private static final String DEFAULT_PART_MOD = "a-";
 	private String partMod = "";
 
@@ -64,7 +65,9 @@ public class ZipNumOutputFormat extends FileOutputFormat<Text, Text> {
 		FSDataOutputStream mainOut = mainFs.create(mainFile, false, buffSize, progress);
 		FSDataOutputStream summaryOut = summaryFs.create(summaryFile, false, buffSize, progress);
 		
-		return new ZipNumRecordWriter(count, mainOut, summaryOut, partitionName);
+		String cdxHeader = conf.get(ZIP_NUM_CDX_HEADER);
+		
+		return new ZipNumRecordWriter(count, mainOut, summaryOut, partitionName, cdxHeader);
 	}
 
 	/**

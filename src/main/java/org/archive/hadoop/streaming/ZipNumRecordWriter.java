@@ -36,7 +36,7 @@ public class ZipNumRecordWriter implements RecordWriter<Text, Text>{
     protected String partName;
 
     public ZipNumRecordWriter(int limit,
-    		DataOutputStream outMain, DataOutputStream outSummary, String partName) {
+    		DataOutputStream outMain, DataOutputStream outSummary, String partName, String cdxHeader) {
     	this.outMain = outMain;
     	this.outSummary = outSummary;
     	this.limit = limit;
@@ -46,6 +46,15 @@ public class ZipNumRecordWriter implements RecordWriter<Text, Text>{
     	//summaryBuffer = new ByteArrayOutputStream(DEFAULT_MAX_BUFFER);
     	gzBuffer = new ByteArrayOutputStream(DEFAULT_MAX_GZ_BUFFER);
     	this.partName = partName;
+    	
+    	if (cdxHeader != null) {
+    		try {
+				this.writeLine(cdxHeader);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
     }
 
 	@Override
