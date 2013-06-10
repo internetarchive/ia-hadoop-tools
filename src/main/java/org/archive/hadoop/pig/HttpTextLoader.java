@@ -35,6 +35,7 @@ public class HttpTextLoader extends TextLoader {
 	protected final static String HTTP_TEXTLOADER_GZIP = "httptextloader.gzip";
 	protected final static String HTTP_TEXTLOADER_ZIPNUM_CLUSTER = "httptextloader.clusterUri";
 	protected final static String HTTP_TEXTLOADER_MAX_AGGREGATE_BLOCKS = "httptextloader.maxAggregateBlocks";
+	protected final static String HTTP_TEXTLOADER_HTTP_LOAD_CDX = "httptextloader.httpLoadCdx";
 	
 	protected final static String COUNT_LINES_PARAM = "&countLines=true";
 	
@@ -92,11 +93,12 @@ public class HttpTextLoader extends TextLoader {
 				
 				String clusterUri = conf.get(HTTP_TEXTLOADER_ZIPNUM_CLUSTER);
 				
+				boolean httpLoadCdx = conf.getBoolean(HTTP_TEXTLOADER_HTTP_LOAD_CDX, false);				
 				
 				HttpClusterInputSplit clusterSplit = (HttpClusterInputSplit)split;
 				
 				try {
-					if (clusterUri != null) {
+					if (!httpLoadCdx && (clusterUri != null)) {
 						int maxAggBlocks = Integer.parseInt(conf.get(HTTP_TEXTLOADER_MAX_AGGREGATE_BLOCKS, "1"));
 						return new HttpZipNumDerefLineRecordReader(clusterUri, clusterSplit.getUrl(), clusterSplit.getSplit(), maxAggBlocks);
 					} else {
