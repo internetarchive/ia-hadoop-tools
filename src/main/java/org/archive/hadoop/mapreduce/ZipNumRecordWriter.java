@@ -1,11 +1,11 @@
 package org.archive.hadoop.mapreduce;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -58,7 +58,7 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
 
   public FSDataOutputStream out;
   public CompressionCodec codec;
-  public DataOutputStream compressing;
+  public CompressionOutputStream compressing;
   public FSDataOutputStream summary;
   public String partitionName;
    
@@ -77,7 +77,9 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
     this.out = out;
 
     this.codec = codec;
-    this.compressing  = startCompressionStream( this.codec, this.out );
+    
+    /* Create CompressionOutputStream once when starting */
+    this.compressing  = codec.createOutputStream( out );
     
     this.summary = summary;
     this.partitionName = partitionName;
@@ -142,7 +144,7 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
         // Flush and close the current compression block/envelope.  
         // The close() method is supposed to flush() first, but you never know...
         compressing.flush();
-        compressing.close();
+        compressing.finish();
         
         writeSummary();
         
@@ -150,7 +152,8 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
         oldPos = out.getPos();
         count  = 0;
         
-        compressing  = startCompressionStream( codec, out );
+        // Reset Compression stream to begin compressing again w/o resetting underlying stream
+        compressing.resetState();
       }
   }
   
@@ -163,6 +166,7 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
   {
     // I'm paranoid about flushing :)
     compressing.flush();
+    compressing.finish();
     compressing.close();
 
     // It's possible no records were written to this output partition,
@@ -175,16 +179,6 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
     out.flush();
     out.close();
     summary.close();
-  }
-  
-  /**
-   * Convenience method to start a new compression output stream,
-   * ensuring the use of the NotClosingDataOutputStream so that we can
-   * prevent the codec stream from closing the underlying file stream.
-   */
-  public DataOutputStream startCompressionStream( CompressionCodec codec, DataOutputStream out ) throws IOException
-  {
-    return new DataOutputStream( codec.createOutputStream( new NotClosingDataOutputStream( out ) ) );
   }
 
   /**
@@ -202,29 +196,4 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
     summary.write( NEWLINE ); 
     summary.flush();
   }
-  
-  /**
-   * Simple wrapper around a DataOutputStream which traps calls to
-   * close() and ignores them.
-   *
-   * This purpose of this class is to wrap the underlying file which
-   * is written by the compression codec stream.  When we close the
-   * compression stream, it tries to close the underlying file
-   * stream, which we want to avoid.  We want to keep the underlying
-   * file stream open so that we can write the next compressed
-   * block/envelope.
-   */
-  public static class NotClosingDataOutputStream extends DataOutputStream
-  {
-    public NotClosingDataOutputStream( DataOutputStream out )
-    {
-      super(out);
-    }
-    
-    public void close()
-    {
-      // Refuse to close!
-    }
-  }
-
 }
