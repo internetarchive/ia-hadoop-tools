@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -15,6 +14,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -61,33 +62,28 @@ public class ZipNumWriterTool implements Tool {
 		ZipNumRecordWriter zipnumWriter = null;
 		
 		try {
-			while (index < args.length) {
+			for (index = 0; index < args.length; index++) {
 				
 				if (args[index].equals("-l")) {
-					limit = Integer.valueOf(args[index++]);
+					limit = Integer.valueOf(args[++index]);
 					continue;
 				}
 				
 				if (args[index].equals("-s")) {
-					summary = args[index++];
+					summary = args[++index];
 					continue;
 				}
 				
 				if (args[index].equals("-i")) {
-					input = args[index++];
+					input = args[++index];
 					continue;
 				}
 				
 				output = args[index];
 			}
 			
-			if (input == null) {
-				inReader = new InputStreamReader(System.in);
-			} else {
-				inReader = new FileReader(input);
-			}
-			
-			GzipCodec codec = new GzipCodec();
+			CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+			CompressionCodec codec = ccf.getCodecByClassName(GzipCodec.class.getName());
 			
 			Path mainFile = new Path(output);
 			Path summaryFile = null;
@@ -100,6 +96,12 @@ public class ZipNumWriterTool implements Tool {
 			
 			FileSystem mainFs = mainFile.getFileSystem(conf);
 			FileSystem summaryFs = summaryFile.getFileSystem(conf);
+			
+			if (input == null) {
+				inReader = new InputStreamReader(System.in);
+			} else {
+				inReader = new InputStreamReader(mainFs.open(new Path(input)));
+			}
 	
 			FSDataOutputStream mainOut = mainFs.create(mainFile, false);
 			FSDataOutputStream summaryOut = summaryFs.create(summaryFile, false);
@@ -117,7 +119,8 @@ public class ZipNumWriterTool implements Tool {
 				zipnumWriter.write(textLine, empty);
 			}
 			
-		} catch (ArrayIndexOutOfBoundsException aie) {
+		} catch (RuntimeException re) {
+			re.printStackTrace();
 			return USAGE(1,"Wrong number of arguments");
 		} finally {
 			if (inReader != null) {
