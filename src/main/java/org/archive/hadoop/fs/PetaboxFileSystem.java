@@ -301,7 +301,13 @@ public class PetaboxFileSystem extends FileSystem {
 			// Item
 			String itemid = f.getName();
 			ItemMetadata md = getItemMetadata(itemid);
-			long mtime = md.getUpdated();
+			//long mtime = md.getUpdated();
+			// in a strict sense, mtime should be the largest of
+			// addeddate, mtime of _meta.xml and mtime of _files.xml. As file entry for _files.xml
+			// does not have mtime property, we'd need to take the largest of file's mtime. Since
+			// we don't expect any serious use of FileStatus's mtime, we simply return addeddate as
+			// mtime.
+			long mtime = md.getAddedDate();
 			Path qf = makeQualified(f);
 			// Note mtime is in seconds and FileStatus wants milliseconds.
 			fstat = new FileStatus(0, true, md.isSolo() ? 1 : 2, 4096, mtime * 1000, qf);

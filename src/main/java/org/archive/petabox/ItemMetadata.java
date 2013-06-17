@@ -2,6 +2,10 @@ package org.archive.petabox;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,8 +23,12 @@ public class ItemMetadata {
 	String dir;
 	String[] collection;
 	Map<String, String> properties;
+	// created and updated are related to metadata API's cache
+	// management, rather than to modification of items. to be
+	// removed soon.
 	long created;
 	long updated;
+	long addeddate;
 	ItemFile[] files;
 	boolean solo;
 	//    public ItemMetadata(JSONObject jo) {
@@ -87,6 +95,16 @@ public class ItemMetadata {
 	final static boolean getBoolean(Map<String, Object> map, String key) {
 		return getBoolean(map, key, false);
 	}
+	final static long parseDateString(Object o) {
+	    if (o == null) return 0;
+	    DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
+	    try {
+	        Date d = df.parse(o.toString() + " +0000");
+	        return d.getTime();
+	    } catch (ParseException ex) {
+	        return 0;
+	    }
+	}
 
 	@SuppressWarnings("unchecked")
 	public ItemMetadata(Map<String, Object> jo) {
@@ -125,6 +143,8 @@ public class ItemMetadata {
 							}
 						}
 					}
+				} else if (k.equals("addeddate")) {
+				    this.addeddate = parseDateString(joprops.get("addeddate"));
 				} else {
 					this.properties.put(k, joprops.get(k).toString());
 				}
@@ -152,6 +172,9 @@ public class ItemMetadata {
 
 	public long getUpdated() {
 		return updated;
+	}
+	public long getAddedDate() {
+	    return addeddate;
 	}
 	public boolean isSolo() {
 		return solo;
