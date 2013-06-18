@@ -2,12 +2,15 @@ package org.archive.hadoop.streaming;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.LineRecordReader;
 import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.archive.format.gzip.zipnum.ZipNumCluster;
 import org.archive.format.gzip.zipnum.ZipNumParams;
 import org.archive.util.iterator.CloseableIterator;
@@ -21,8 +24,23 @@ public class ZipNumRecordReader implements RecordReader<Text, Text> {
 	protected LineRecordReader inner;
 	protected ZipNumParams params;
 	
+	public ZipNumRecordReader(CombineFileSplit combineSplit, Configuration conf, Reporter reporter, Integer index) throws IOException
+	{
+		Path path = combineSplit.getPath(index);
+		long start = combineSplit.getOffset(index);
+		long length = combineSplit.getLength(index);
+		String[] locs = combineSplit.getLocations();
+		
+		init(conf, new FileSplit(path, start, length, locs));
+	}
+	
 
 	public ZipNumRecordReader(JobConf job, FileSplit fileSplit) throws IOException {
+		init(job, fileSplit);
+	}
+	
+	protected void init(Configuration job, FileSplit fileSplit) throws IOException
+	{
 		inner = new LineRecordReader(job, fileSplit);
 		
 		Path summaryPath = fileSplit.getPath();
