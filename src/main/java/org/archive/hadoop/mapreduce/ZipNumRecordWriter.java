@@ -105,6 +105,9 @@ public class ZipNumRecordWriter extends RecordWriter<Text, Text>
 		  System.err.println("POSSIBLY INVALID CDX LINE: " + cdx);
 	  }
 	  
+	  // Ensure no tabs are present in the key
+	  summaryKey = summaryKey.replace("\t", "%09");
+	  
 	  return summaryKey;
    }
 
