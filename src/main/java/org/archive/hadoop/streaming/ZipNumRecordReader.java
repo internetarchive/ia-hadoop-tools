@@ -3,6 +3,7 @@ package org.archive.hadoop.streaming;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
@@ -39,16 +40,16 @@ public class ZipNumRecordReader implements RecordReader<Text, Text> {
 		init(job, fileSplit);
 	}
 	
-	protected void init(Configuration job, FileSplit fileSplit) throws IOException
+	protected void init(Configuration conf, FileSplit fileSplit) throws IOException
 	{
-		inner = new LineRecordReader(job, fileSplit);
+		inner = new LineRecordReader(conf, fileSplit);
 		
 		Path summaryPath = fileSplit.getPath();
 		
 		String summaryFile = summaryPath.toString();
 		
-		if (summaryFile.startsWith("file:/")) {
-			summaryFile = summaryFile.substring(5);
+		if (!summaryFile.contains(":/")) {
+			summaryFile = conf.get(FileSystem.FS_DEFAULT_NAME_KEY, "") + summaryFile;
 		}
 		
 		cluster = new ZipNumCluster();
