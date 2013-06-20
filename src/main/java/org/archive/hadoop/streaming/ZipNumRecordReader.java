@@ -44,9 +44,12 @@ public class ZipNumRecordReader implements RecordReader<Text, Text> {
 	{
 		inner = new LineRecordReader(conf, fileSplit);
 		
-		Path summaryPath = fileSplit.getPath();
+		String summaryFile = conf.get("conf.zipnum.locationPath", null);
 		
-		String summaryFile = summaryPath.toString();
+		if (summaryFile == null) {
+			Path summaryPath = fileSplit.getPath();
+			summaryFile = summaryPath.toString();
+		}
 		
 		if (!summaryFile.contains(":/")) {
 			summaryFile = conf.get(FileSystem.FS_DEFAULT_NAME_KEY, "") + summaryFile;
@@ -57,7 +60,7 @@ public class ZipNumRecordReader implements RecordReader<Text, Text> {
 		cluster.init();
 		
 		params = new ZipNumParams();
-		params.setMaxAggregateBlocks(0);
+		params.setMaxAggregateBlocks(conf.getInt("conf.zipnum.maxAggBlocks", 3000));
 		params.setMaxBlocks(0);
 		
 		cdxReader = cluster.getCDXIterator(new RecordReaderValueIterator(inner), params);
