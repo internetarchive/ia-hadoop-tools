@@ -59,6 +59,16 @@ public class CDXMapper extends Mapper<Object, Text, Text, Text>
 		return keySB.toString();
 	}
 	
+	public String canonicalizeUrl(String url)
+	{
+		try {
+			url = keyMaker.makeKey(url);
+		} catch (URISyntaxException e) {
+			LOG.warning("Failed Canonicalization: " + url);
+		}
+		return url;
+	}
+	
 	public StringPair convert(String cdxLine) {
 		if(cdxLine.startsWith(" CDX ")) {
 			return new StringPair("", NEW_CDX_HEADER);

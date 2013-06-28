@@ -37,7 +37,12 @@ public class Recanonicalize extends EvalFunc<String> {
 		
 		if (tuple.size() == 1) {
 			String line = (String)tuple.get(0);
-			return converter.convertLine(line);
+			// If only the url, then convert url instead of whole cdx line
+			if (!line.contains(" ")) {
+				return converter.canonicalizeUrl(line);
+			} else {
+				return converter.convertLine(line);	
+			}
 		} else if (tuple.size() == 2) {
 			String key = (String)tuple.get(0);
 			String value = (String)tuple.get(1);
