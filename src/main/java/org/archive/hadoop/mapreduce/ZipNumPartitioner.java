@@ -1,5 +1,6 @@
 package org.archive.hadoop.mapreduce;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -160,10 +161,42 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 			}
 			
 			try {
-				loadJsonSplits(splitsFile, conf);
+				if (splitsFile.endsWith(".json")) {
+					loadJsonSplits(splitsFile, conf);
+				} else {
+					loadTextSplits(splitsFile, conf);
+				}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			}
+		}
+	}
+	
+	protected void loadTextSplits(String splitsFile, Configuration conf) throws IOException
+	{
+		Path splitsPath = new Path(splitsFile);
+		FileSystem fs = splitsPath.getFileSystem(conf);
+		
+		FSDataInputStream inputStream = null;
+		BufferedReader reader = null;
+		
+		try {
+			inputStream = fs.open(splitsPath);
+			
+			reader = new BufferedReader(new InputStreamReader(inputStream));
+			
+			splitList = new ArrayList<String>();
+			
+			String line = null;
+			
+			while ((line = reader.readLine()) != null) {
+				splitList.add(line);
+			}
+			
+		} finally {
+			if (reader != null) {
+				reader.close();
 			}
 		}
 	}
@@ -173,23 +206,29 @@ public class ZipNumPartitioner<K, V> extends Partitioner<K, V> implements Config
 		Path splitsPath = new Path(splitsFile);
 		FileSystem fs = splitsPath.getFileSystem(conf);
 		
-		FSDataInputStream inputStream = fs.open(splitsPath);
+		FSDataInputStream inputStream = null;
 		
-		JSONTokener tokener = new JSONTokener(new InputStreamReader(inputStream));
-		JSONArray root = new JSONArray(tokener);
-		
-		// 0th object is number of lines, actual split points are 1th index in the root array
-		JSONArray splitsArray = root.getJSONArray(1);
-		
-		// Assuming the first and last values of the array are empty lines
-		splitList = new ArrayList<String>(splitsArray.length() - 2);
-		
-		for (int i = 1; i < splitsArray.length() - 1; i++) {
-			String split = splitsArray.getString(i);
-			splitList.add(split);
-			//System.out.println(split);
+		try {
+			inputStream = fs.open(splitsPath);
+			
+			JSONTokener tokener = new JSONTokener(new InputStreamReader(inputStream));
+			JSONArray root = new JSONArray(tokener);
+			
+			// 0th object is number of lines, actual split points are 1th index in the root array
+			JSONArray splitsArray = root.getJSONArray(1);
+			
+			// Assuming the first and last values of the array are empty lines
+			splitList = new ArrayList<String>(splitsArray.length() - 2);
+			
+			for (int i = 1; i < splitsArray.length() - 1; i++) {
+				String split = splitsArray.getString(i);
+				splitList.add(split);
+				//System.out.println(split);
+			}			
+		} finally {
+			if (inputStream != null) {
+				inputStream.close();
+			}
 		}
-		
-		inputStream.close();
 	}
 }
