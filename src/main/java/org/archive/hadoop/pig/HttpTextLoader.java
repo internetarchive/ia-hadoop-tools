@@ -155,7 +155,7 @@ public class HttpTextLoader extends TextLoader {
 			}
 			
 			if (totalLineCount > 0) {
-				numSplits = totalLineCount / maxLinesPerSplit;
+				numSplits = (totalLineCount / maxLinesPerSplit) + 1;
 				LOGGER.info("Total Line Count / maxLinesPerSplit = " + totalLineCount + " / " + maxLinesPerSplit + " = " + numSplits);
 			} else {
 				LOGGER.info("Total Line Count Not Available");
