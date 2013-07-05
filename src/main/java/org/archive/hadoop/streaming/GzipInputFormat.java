@@ -26,6 +26,6 @@ public class GzipInputFormat extends FileInputFormat<Text, Text> {
 		
 		FileSplit fileSplit = (FileSplit)split;
 		
-		return new GzipSingleFileRecordReader(fileSplit.getPath(), job);
+		return new GzipSingleFileRecordReader(fileSplit.getPath(), 0, job);
 	}
 }

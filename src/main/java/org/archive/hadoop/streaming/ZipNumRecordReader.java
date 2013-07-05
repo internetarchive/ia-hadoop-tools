@@ -12,13 +12,13 @@ import org.apache.hadoop.mapred.LineRecordReader;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
-import org.archive.format.gzip.zipnum.ZipNumCluster;
+import org.archive.format.gzip.zipnum.ZipNumIndex;
 import org.archive.format.gzip.zipnum.ZipNumParams;
 import org.archive.util.iterator.CloseableIterator;
 
 public class ZipNumRecordReader implements RecordReader<Text, Text> {
 	
-	protected ZipNumCluster cluster = null;
+	protected ZipNumIndex cluster = null;
 		
 	protected CloseableIterator<String> cdxReader;
 	
@@ -55,9 +55,7 @@ public class ZipNumRecordReader implements RecordReader<Text, Text> {
 			summaryFile = conf.get(FileSystem.FS_DEFAULT_NAME_KEY, "") + summaryFile;
 		}
 		
-		cluster = new ZipNumCluster();
-		cluster.setSummaryFile(summaryFile);
-		cluster.init();
+		cluster = ZipNumIndex.createIndexWithSummaryPath(summaryFile);
 		
 		params = new ZipNumParams();
 		params.setMaxAggregateBlocks(conf.getInt("conf.zipnum.maxAggBlocks", 3000));

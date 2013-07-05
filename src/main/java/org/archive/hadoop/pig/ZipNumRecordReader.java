@@ -9,13 +9,13 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
-import org.archive.format.gzip.zipnum.ZipNumCluster;
+import org.archive.format.gzip.zipnum.ZipNumIndex;
 import org.archive.format.gzip.zipnum.ZipNumParams;
 import org.archive.util.iterator.CloseableIterator;
 
 public class ZipNumRecordReader extends RecordReader<Text, Text> {
 	
-	protected ZipNumCluster cluster = null;
+	protected ZipNumIndex cluster = null;
 	
 	protected Text nextCdxLine;
 	protected Text key;
@@ -53,9 +53,7 @@ public class ZipNumRecordReader extends RecordReader<Text, Text> {
 			summaryFile = summaryFile.substring(5);
 		}
 		
-		cluster = new ZipNumCluster();
-		cluster.setSummaryFile(summaryFile);
-		cluster.init();
+		cluster = ZipNumIndex.createIndexWithSummaryPath(summaryFile);
 		
 		key = new Text("");
 		nextCdxLine = new Text("");

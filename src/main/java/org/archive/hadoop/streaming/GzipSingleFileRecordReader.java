@@ -27,10 +27,10 @@ public class GzipSingleFileRecordReader implements RecordReader<Text, Text>
 	
 	public GzipSingleFileRecordReader(CombineFileSplit split, Configuration conf, Reporter reporter, Integer index) throws IOException
 	{
-		this(split.getPath(index), conf);
+		this(split.getPath(index), split.getOffset(index), conf);
 	}
 	
-	public GzipSingleFileRecordReader(Path file, Configuration conf) throws IOException
+	public GzipSingleFileRecordReader(Path file, long startOffset, Configuration conf) throws IOException
 	{
 		currPath = file.toString();
 		
@@ -51,7 +51,9 @@ public class GzipSingleFileRecordReader implements RecordReader<Text, Text>
 		    
 		    InputStream in = new OpenJDK7GZIPInputStream(fileIn);
 		    
-			reader = new LineRecordReader(in, 0, Long.MAX_VALUE, conf, recordDelimiter);
+		    long endOffset = Long.MAX_VALUE;
+		    
+			reader = new LineRecordReader(in, startOffset, endOffset, conf, recordDelimiter);
 			longKey = reader.createKey();
 		} catch (Exception e) {
 			if (currAttempt < MAX_ALLOW_FAILURES) {
