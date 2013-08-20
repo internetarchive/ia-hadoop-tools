@@ -9,6 +9,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.mapred.FileOutputCommitter;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
@@ -69,6 +70,12 @@ public class NativeZipNumOutputFormat extends FileOutputFormat<Text, Text> {
 			throws IOException {
 		//FileOutputCommitter committer = (FileOutputCommitter) getOutputCommitter(context);
 		//return new Path(this.getWorkOutputPath(context.getJobConf()), partWithExt);
+		if (conf.getBoolean("conf.zipnum.noTmp", false)) {
+		    Path outputPath = getOutputPath(conf);
+			Path directPath = new Path(outputPath, partWithExt);
+			return directPath;
+		}
+		
 		return FileOutputFormat.getTaskOutputPath(conf, partWithExt);
 	}
 	
