@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -27,7 +29,11 @@ import org.apache.pig.data.TupleFactory;
  *
  */
 public class CrawlLogLoader extends LoadFunc {
-  private LineRecordReader in = null;
+    private static final Log log = LogFactory.getLog(CrawlLogLoader.class);
+    
+    private LineRecordReader in = null;
+
+    private PigSplit split;
   
   public Tuple getNext() throws IOException {
     TupleFactory tupleFactory = TupleFactory.getInstance();
@@ -46,7 +52,7 @@ public class CrawlLogLoader extends LoadFunc {
       // 5: via URI
       // 6: content-type
       // 7: thread (#\d+)
-      // 8: starttime+duration
+      // 8: starttime+duration, or "-" for exclusion case (status < 0) 
       // 9: content hash (sha1:BASE32)
       // 10: -
       // 11: -
@@ -59,15 +65,31 @@ public class CrawlLogLoader extends LoadFunc {
 	      fields[i] = "-1";
 	    list.add(new DataByteArray(fields[i]));
 	  } else if (i == 8) {
-	    String[] startDuration = fields[i].split("\\+");
+	    String[] startDuration = fields[i].split("\\+", 2);
 	    if (startDuration.length == 1) {
-	      // abnormal case - should never happen
-	      list.add(new DataByteArray(startDuration[0]));
-	      list.add(new DataByteArray("-"));
+	        // column 8 is "-" for crawl exclusion (ex. by robots.txt)
+	        if (startDuration[0].equals("-")) {
+	            list.add(null);
+	            list.add(null);
+	        } else {
+	            // abnormal case (no "+") - should never happen
+	            list.add(new DataByteArray(startDuration[0]));
+	            list.add(null);
+	            log.warn("unexpected value (no '+') \"" + fields[i]
+	                    + "\" in column 8 of line \"" + line
+	                    + "\", split " + split);
+	        }
 	    } else {
 	      // normal case
 	      list.add(new DataByteArray(startDuration[0]));
 	      list.add(new DataByteArray(startDuration[1]));
+	      if (startDuration[0].length() == 0 || startDuration[1].length() == 0) {
+	          log.warn("unexpected value (empty sub-field) \""
+	                  + fields[i]
+	                  + "\" in column 8 of line \""
+	                  + line
+	                  + "\", split " + split);
+	      }
 	    }
 	  } else {
 	    list.add(new DataByteArray(fields[i]));
@@ -89,6 +111,7 @@ public class CrawlLogLoader extends LoadFunc {
   public void prepareToRead(RecordReader reader, PigSplit split)
       throws IOException {
     in = (LineRecordReader)reader;
+    this.split = split;
   }
 
   @Override
