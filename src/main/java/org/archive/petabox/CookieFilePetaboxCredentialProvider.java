@@ -19,7 +19,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Kenji Nagahashi
  *
  */
-public class CookieFilePetaboxCredentialProvider implements
+public class CookieFilePetaboxCredentialProvider extends
     PetaboxCredentialProvider {
   private static final Log LOG = LogFactory.getLog(CookieFilePetaboxCredentialProvider.class);
   

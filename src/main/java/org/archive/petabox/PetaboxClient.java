@@ -28,7 +28,7 @@ import org.apache.http.params.HttpParams;
 import org.archive.hadoop.fs.PetaboxFileSystem;
 
 public class PetaboxClient {
-	private static Log LOG = LogFactory.getLog(PetaboxClient.class);
+	private static final Log LOG = LogFactory.getLog(PetaboxClient.class);
 
 	protected String petaboxProtocol = "http";
 	protected String petaboxHost = "archive.org";
@@ -63,12 +63,24 @@ public class PetaboxClient {
 	public static final String VERSION = "0.0.2";
 	public static final String USER_AGENT = PetaboxFileSystem.class.getName() + "/" + VERSION;
 
-	protected PetaboxCredentialProvider credentialProvider;
+	protected PetaboxAuthProvider authProvider;
 
+	/**
+	 * set {@link PetaboxCredentialProvider} for authenticating requests.
+	 * @deprecated use {@link #setAuthProvider(PetaboxAuthProvider)}.
+	 * @param credentialProvider
+	 */
 	public void setCredentialProvider(PetaboxCredentialProvider credentialProvider) {
-		this.credentialProvider = credentialProvider;
+		this.authProvider = credentialProvider;
 	}
-
+	/**
+	 * set {@link PetaboxAuthProvider} for authenticating requests.
+	 * @param authProvider
+	 */
+	public void setAuthProvider(PetaboxAuthProvider authProvider) {
+        this.authProvider = authProvider;
+    }
+	
 	protected HttpClient client;
 
 	public PetaboxClient(PetaboxClientConfig conf) {
@@ -206,26 +218,12 @@ public class PetaboxClient {
 		return md;
 	}
 
-	public void addAuthCookies(HttpMessage msg) {
-		StringBuilder value = new StringBuilder();
-		String user = credentialProvider != null ? credentialProvider.getUser() : null;
-		if (user != null) {
-			value.append("logged-in-user=").append(user).append("; ");
-			LOG.debug("logged-in-user=" + user);
-		}
-		String sig = credentialProvider != null ? credentialProvider.getSignature() : null;
-		if (sig != null) {
-			value.append("logged-in-sig=").append(sig);
-			LOG.debug("logged-in-sig=" + sig);
-		}
-		LOG.debug("adding auth cookies:" + value.toString());
-		msg.addHeader("Cookie", value.toString());
-	}
 	public void setupRequest(HttpMessage msg) {
 		msg.addHeader("User-Agent", USER_AGENT);
 		if (referer != null)
 			msg.addHeader("Referer", referer);
-		addAuthCookies(msg);
+		if (authProvider != null)
+		    authProvider.addAuthCookies(msg);
 	}
 
 	/**

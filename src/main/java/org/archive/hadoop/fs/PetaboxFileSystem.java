@@ -34,6 +34,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
 import org.archive.hadoop.util.HadoopUtil;
 import org.archive.petabox.CookieFilePetaboxCredentialProvider;
+import org.archive.petabox.HMACPetaboxAuthProvider;
 import org.archive.petabox.ItemFile;
 import org.archive.petabox.ItemMetadata;
 import org.archive.petabox.PetaboxClient;
@@ -51,9 +52,14 @@ public class PetaboxFileSystem extends FileSystem {
 	private static Log LOG = LogFactory.getLog(PetaboxFileSystem.class);
 	
 	/**
+	 * default value for {@link #downloadPrefix}. 
+	 * "/serve" is the preferred value as it doesn't increment download counter.
+	 */
+	public static final String DEFAULT_DOWNLOAD_PREFIX = "/serve";
+	/**
 	 * URL path prefix for downloading a file in an item.
 	 */
-	public static final String DOWNLOAD_PREFIX = "/serve";
+	private String downloadPrefix;
 	
 	protected URI fsUri;
 	private Path cwd = new Path("/");
@@ -105,7 +111,13 @@ public class PetaboxFileSystem extends FileSystem {
 		}
 	}
 
-	public static class ConfigurationPetaboxCredentialProvider implements PetaboxCredentialProvider {
+	/**
+	 * loads credentials from cookie file if not set in configuration. loaded credentials
+	 * are put into Configuration to make it available in MR tasks. this may not work well
+	 * in non-Pig environment, where PBFS is not instantiated in submitting host.
+	 * @author kenji
+	 */
+	public static class ConfigurationPetaboxCredentialProvider extends PetaboxCredentialProvider {
 		private String user;
 		private String sig;
 		public ConfigurationPetaboxCredentialProvider(Configuration conf, String confbase) {
@@ -137,6 +149,19 @@ public class PetaboxFileSystem extends FileSystem {
 			return sig;
 		}
 	}
+	/**
+	 * new HMAC-based authentication.
+	 * @author kenji
+	 */
+	public static class ConfigurationHMACPetaboxAuthProvider extends HMACPetaboxAuthProvider {
+	    public ConfigurationHMACPetaboxAuthProvider(Configuration conf, String confbase) {
+	        secretKey = conf.get(confbase + ".secret");
+	        if (secretKey == null) {
+	            LOG.warn("HMAC secret key is unavailable - please set " + confbase + ".secret parameter");
+	            secretKey = "";
+	        }
+        }
+	}
 	
 	@Override
 	public void initialize(URI name, final Configuration conf) throws IOException {
@@ -152,11 +177,16 @@ public class PetaboxFileSystem extends FileSystem {
 		this.pbclient = new PetaboxClient(pbconf);
 		this.pbclient.setPetaboxHost(fsUri.getAuthority());
 		this.pbclient.setReferer(getHadoopJobInfo());
-		// loads credentials from cookie file if not set in configuration. loaded credentials
-		// are put into Configuration to make it available in MR tasks. this may not work well
-		// in non-Pig environment, where PBFS is not instantiated in submitting host.
-		this.pbclient.setCredentialProvider(new ConfigurationPetaboxCredentialProvider(conf, confbase));
+		
+		String authType = conf.get(confbase + ".auth-type", "hmac");
+		if ("user".equals(authType)) {
+	        this.pbclient.setAuthProvider(new ConfigurationPetaboxCredentialProvider(conf, confbase));
+		} else {
+		    this.pbclient.setAuthProvider(new ConfigurationHMACPetaboxAuthProvider(conf, confbase));
+		}
 
+		this.downloadPrefix = conf.get(confbase + ".download-prefix", DEFAULT_DOWNLOAD_PREFIX);
+		
 		this.urlTemplate = conf.get(confbase + ".url-template");
 
 		// this is hdfs:// URI for job staging, which contains job tracker
@@ -413,9 +443,11 @@ public class PetaboxFileSystem extends FileSystem {
 			// if itemid is a collection, list all items in the collection via search engine.
 			// this returns FileStatuses with 1-depth canonical Path. Hadoop is just fine with it.  
 			if (md.isCollection()) {
+			    LOG.info("enumerating items in collection " + itemid);
 				return searchItems(itemid);
 			}
 			// for regular item, return list of files in it.
+			LOG.info("enumerating files in item " + itemid);
 			if (md.getFiles() != null) {
 				List<FileStatus> files = new ArrayList<FileStatus>();
 				Path qf = makeQualified(f);
@@ -455,7 +487,7 @@ public class PetaboxFileSystem extends FileSystem {
 	 */
 	protected URI getRealURI(URI uri) throws URISyntaxException {
 		if (urlTemplate == null) {
-			return new URI("http", fsUri.getAuthority(), DOWNLOAD_PREFIX + uri.getPath(), null);
+			return new URI("http", fsUri.getAuthority(), downloadPrefix + uri.getPath(), null);
 		}
 		String path = uri.getPath(); // should be in /ITEM/FILE format.
 		StringBuffer sb = new StringBuffer();
