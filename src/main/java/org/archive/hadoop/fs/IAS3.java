@@ -17,7 +17,6 @@ public class IAS3 extends NativeS3FileSystem {
 		try {
 			result = super.mkdirs(f, permission);
 		} catch (IOException io) {
-			System.out.println(io.getCause());
 			if (io.getCause() instanceof S3ServiceException) {
 				result = true;
 			}

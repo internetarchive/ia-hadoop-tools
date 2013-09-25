@@ -134,9 +134,16 @@ public class HttpInputLineRecordReader extends RecordReader<LongWritable, Text> 
 		LOGGER.info("Loader initialize - " + urlString);
 		
 		conn = (HttpURLConnection)url.openConnection();
+		
+		String authCookie = conf.get(HttpTextLoader.HTTP_TEXTLOADER_AUTH);
+		
+		if (authCookie != null) {
+			conn.setRequestProperty("Cookie", "cdx_auth_token=" + authCookie);
+		}
+		
 		conn.connect();
 				
-		String linesEstimate = conn.getHeaderField(HttpTextLoader.NUM_LINES_HEADER_FIELD);
+		String linesEstimate = conn.getHeaderField(HttpTextLoader.NUM_PAGES_HEADER_FIELD);
 		
 		if (linesEstimate != null) {
 			try {

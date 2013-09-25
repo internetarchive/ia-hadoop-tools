@@ -18,7 +18,8 @@ public class HttpZipNumDerefLineRecordReader extends RecordReader<LongWritable, 
 	
 	protected String clusterUri;
 	
-	protected String start, end;
+	protected String start;
+	protected String end;
 	
 	protected Text nextCdxLine;
 	

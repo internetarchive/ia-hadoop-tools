@@ -26,28 +26,28 @@ public class HttpTextLoader extends TextLoader {
 	private final static Logger LOGGER =
 		Logger.getLogger(HttpTextLoader.class.getName());
 	
-	protected int maxLinesPerSplit = 0;
-	protected int numSplits = 1;
-	
 	protected final static String HTTP_TEXTLOADER_URL = "httptextloader.url";
 	protected final static String HTTP_TEXTLOADER_NUM_SPLITS = "httptextloader.numSplits";
-	protected final static String HTTP_TEXTLOADER_MAX_LINES = "httptextloader.maxLines";
+	//protected final static String HTTP_TEXTLOADER_MAX_LINES = "httptextloader.maxLines";
 	protected final static String HTTP_TEXTLOADER_GZIP = "httptextloader.gzip";
 	protected final static String HTTP_TEXTLOADER_ZIPNUM_CLUSTER = "httptextloader.clusterUri";
 	protected final static String HTTP_TEXTLOADER_MAX_AGGREGATE_BLOCKS = "httptextloader.maxAggregateBlocks";
 	protected final static String HTTP_TEXTLOADER_HTTP_LOAD_CDX = "httptextloader.httpLoadCdx";
 	
-	protected final static String COUNT_LINES_PARAM = "&countLines=true";
+	protected final static String HTTP_TEXTLOADER_AUTH = "httptextloader.authCookie";
+
+	protected final static String SHOW_NUM_PAGES = "&showNumPages=true";
 	
-	protected final static String GZIP_PARAM = "&output=gzip";
+	protected final static String GZIP_PARAM = "&gzip=true";
 	
-	protected final static String CDX_PARAM = "&cdx=true";
+//	protected final static String CDX_PARAM = "&cdx=true";
+	protected final static String INDEX_ONLY_PARAM = "&showPagedIndex=true";
 	
-	protected final static String SPLIT_PARAM = "&split=";
-	protected final static String NUM_SPLIT_PARAM = "&numSplits=";
+	protected final static String PAGE_PARAM = "&page=";
+//	protected final static String NUM_SPLIT_PARAM = "&numSplits=";
 	
-	protected final static String NUM_LINES_HEADER_FIELD = "X-Cluster-Num-Lines";
-	protected final static String CLUSTER_URI_HEADER_FIELD = "X-Cluster-Uri";
+	protected final static String NUM_PAGES_HEADER_FIELD = "X-CDX-Num-Pages";
+	protected final static String CLUSTER_URI_HEADER_FIELD = "X-CDX-Cluster-Uri";
 	
 	public HttpTextLoader()
 	{
@@ -56,24 +56,32 @@ public class HttpTextLoader extends TextLoader {
 	
 	public HttpTextLoader(String option, String param)
 	{
-		if (option != null) {
-			if (option.equalsIgnoreCase("splits")) {
-				this.numSplits = Integer.parseInt(param);
-				this.maxLinesPerSplit = 0;
-			} else if (option.equalsIgnoreCase("maxLines")) {
-				this.numSplits = 1;
-				this.maxLinesPerSplit = Integer.parseInt(param);
-			}
-		}
+//		if (option != null) {
+//			if (option.equalsIgnoreCase("splits")) {
+//				this.numSplits = Integer.parseInt(param);
+//				this.maxLinesPerSplit = 0;
+//			} else if (option.equalsIgnoreCase("maxLines")) {
+//				this.numSplits = 1;
+//				this.maxLinesPerSplit = Integer.parseInt(param);
+//			}
+//		}
 	}
 	
-	public static String getSplitUrl(String url, int split, int numSplits)
+//	public static String getSplitUrl(String url, int split, int numSplits)
+//	{
+//		StringBuilder builder = new StringBuilder(url);
+//		builder.append(SPLIT_PARAM);
+//		builder.append(split);
+//		builder.append(NUM_SPLIT_PARAM);
+//		builder.append(numSplits);
+//		return builder.toString();
+//	}
+	
+	public static String getPageUrl(String url, int page)
 	{
 		StringBuilder builder = new StringBuilder(url);
-		builder.append(SPLIT_PARAM);
-		builder.append(split);
-		builder.append(NUM_SPLIT_PARAM);
-		builder.append(numSplits);
+		builder.append(PAGE_PARAM);
+		builder.append(page);
 		return builder.toString();
 	}
 	
@@ -100,9 +108,9 @@ public class HttpTextLoader extends TextLoader {
 				try {
 					if (!httpLoadCdx && (clusterUri != null)) {
 						int maxAggBlocks = Integer.parseInt(conf.get(HTTP_TEXTLOADER_MAX_AGGREGATE_BLOCKS, "1"));
-						return new HttpZipNumDerefLineRecordReader(clusterUri, clusterSplit.getUrl(), clusterSplit.getSplit(), maxAggBlocks);
+						return new HttpZipNumDerefLineRecordReader(clusterUri, clusterSplit.getUrl() + INDEX_ONLY_PARAM, clusterSplit.getSplit(), maxAggBlocks);
 					} else {
-						return new HttpInputLineRecordReader(clusterSplit.getUrl() + CDX_PARAM, clusterSplit.getSplit());
+						return new HttpInputLineRecordReader(clusterSplit.getUrl(), clusterSplit.getSplit());
 					}
 				} catch (IOException e) {
 					throw new RuntimeException(e);
@@ -117,12 +125,13 @@ public class HttpTextLoader extends TextLoader {
 				Configuration conf = context.getConfiguration();
 				
 				String url = conf.get(HTTP_TEXTLOADER_URL);
-				int numSplits = conf.getInt(HTTP_TEXTLOADER_NUM_SPLITS, 1);
 				
-				LOGGER.info("getSplits - " + numSplits + " " + url);
+				int numPages = conf.getInt(HTTP_TEXTLOADER_NUM_SPLITS, 1);
 				
-				for (int i = 0; i < numSplits; i++) {
-					array.add(new HttpClusterInputSplit(getSplitUrl(url, i, numSplits), i, numSplits));
+				LOGGER.info("getSplits - " + numPages + " " + url);
+				
+				for (int i = 0; i < numPages; i++) {
+					array.add(new HttpClusterInputSplit(getPageUrl(url, i), i, numPages));
 				}
 				
 				return array;
@@ -143,28 +152,38 @@ public class HttpTextLoader extends TextLoader {
 		} else {
 			location = savedLoc;
 		}
-				
-		if (maxLinesPerSplit > 0) {
-			
-			int totalLineCount = Integer.parseInt(conf.get(HTTP_TEXTLOADER_MAX_LINES, "-1"));
-			
-			if (totalLineCount == -1) {
-				totalLineCount = queryLineCount(location, conf);
-				
-				conf.set(HTTP_TEXTLOADER_MAX_LINES, String.valueOf(totalLineCount));
-			}
-			
-			if (totalLineCount > 0) {
-				numSplits = (totalLineCount / maxLinesPerSplit) + 1;
-				LOGGER.info("Total Line Count / maxLinesPerSplit = " + totalLineCount + " / " + maxLinesPerSplit + " = " + numSplits);
-			} else {
-				LOGGER.info("Total Line Count Not Available");
-			}
+		
+		int numPages = conf.getInt(HTTP_TEXTLOADER_NUM_SPLITS, -1);
+		
+		if (numPages == -1) {
+			numPages = queryLineCount(location, conf);
 		}
 		
-		conf.setInt(HTTP_TEXTLOADER_NUM_SPLITS, numSplits);
+		if (numPages < 0) {
+			numPages = 1;
+		}
+				
+//		if (maxLinesPerSplit > 0) {
+//			
+//			int totalLineCount = Integer.parseInt(conf.get(HTTP_TEXTLOADER_MAX_LINES, "-1"));
+//			
+//			if (totalLineCount == -1) {
+//				totalLineCount = queryLineCount(location, conf);
+//				
+//				conf.set(HTTP_TEXTLOADER_MAX_LINES, String.valueOf(totalLineCount));
+//			}
+//			
+//			if (totalLineCount > 0) {
+//				numSplits = (totalLineCount / maxLinesPerSplit) + 1;
+//				LOGGER.info("Total Line Count / maxLinesPerSplit = " + totalLineCount + " / " + maxLinesPerSplit + " = " + numSplits);
+//			} else {
+//				LOGGER.info("Total Line Count Not Available");
+//			}
+//		}
 		
-		LOGGER.info("setLocation - " + numSplits + " " + location);
+		conf.setInt(HTTP_TEXTLOADER_NUM_SPLITS, numPages);
+		
+		LOGGER.info("setLocation - " + numPages + " " + location);
 	}
 	
 	protected int queryLineCount(String url, Configuration conf)
@@ -173,13 +192,13 @@ public class HttpTextLoader extends TextLoader {
 		int numLines = 0;
 		
 		try {
-			URL theURL = new URL(url + COUNT_LINES_PARAM);
+			URL theURL = new URL(url + SHOW_NUM_PAGES);
 			
 			conn = (HttpURLConnection)theURL.openConnection();
 			conn.setRequestMethod("HEAD");
 			conn.connect();
 			
-			numLines = conn.getHeaderFieldInt(NUM_LINES_HEADER_FIELD, 0);
+			numLines = conn.getHeaderFieldInt(NUM_PAGES_HEADER_FIELD, 0);
 			
 			String clusterUri = conn.getHeaderField(CLUSTER_URI_HEADER_FIELD);
 			
