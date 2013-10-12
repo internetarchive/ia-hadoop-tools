@@ -1,5 +1,4 @@
 package org.archive.server;
-
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,7 +8,7 @@ import com.google.common.io.FileBackedOutputStream;
 public class FileBackedInputStream extends FilterInputStream {
 
 	FileBackedOutputStream backer;
-	
+
 	public static int MAX_RAM = 1024 * 1024 * 2;
 
 	protected FileBackedInputStream(InputStream in) {
@@ -26,11 +25,11 @@ public class FileBackedInputStream extends FilterInputStream {
 	public InputStream getInputStream() throws IOException {
 		return backer.getSupplier().getInput();
 	}
-	
+
 	public void resetBacker() throws IOException {
 		backer.reset();
 	}
-	
+
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
 		int amt = super.read(b, off, len);
