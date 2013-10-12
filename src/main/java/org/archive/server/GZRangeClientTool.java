@@ -1,5 +1,4 @@
 package org.archive.server;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,7 +35,7 @@ public class GZRangeClientTool implements Tool {
 		+ "\tURLX are HTTP URLs pointing to the W/ARCs\n\n"
 		+ "A new series of W/ARC files are written in TGT_DIR, where each is prefixed with PREFIX\n"
 		+ "\n";	
-	
+
 	private Configuration conf;
 
 	public void setConf(Configuration conf) {
@@ -45,7 +44,7 @@ public class GZRangeClientTool implements Tool {
 	public Configuration getConf() {
 		return conf;
 	}
-	
+
 	public static int USAGE(Options opts) {
 		HelpFormatter formatter = new HelpFormatter();
 		System.err.println();
@@ -71,7 +70,7 @@ public class GZRangeClientTool implements Tool {
 		Option warcSize = new Option("ws","warc-size",true,
 				 "stop writing records to WARCs after they grow beyond SIZE bytes");
 		warcSize.setArgName("SIZE");
-		
+
 		Option warcHeaderFields = new Option("wf","warc-header-fields",true,
 				"Read default WARC header fields from file PATH");
 		warcHeaderFields.setArgName("PATH");
@@ -80,19 +79,27 @@ public class GZRangeClientTool implements Tool {
 				"Use TIMESTAMP14 as the timestamp for W/ARC names, and for W/ARC header records.");
 		timestamp.setArgName("TIMESTAMP14");
 
+		Option hmacName = new Option("hmacname","hmacname",true,
+				"HMAC Name.");
+		hmacName.setArgName("HMACNAME");
+		
+		Option hmacSignature = new Option("hmacsignature","hmacsignature",true,
+				"HMAC Signature.");
+		hmacSignature.setArgName("HMACSIGNATURE");
+
 		Option errOnExit = new Option("e", "exit-on-error", false, 
 		"if declared, a failure to get a single record causes a failure in the tool");
-		
+
 		options.addOption(arcSize);
 		options.addOption(warcSize);
 		options.addOption(warcHeaderFields);
 		options.addOption(timestamp);
+		options.addOption(hmacName);
+		options.addOption(hmacSignature);
 		options.addOption(errOnExit);
-
-		
 		return options;
 	}
-	
+
 	public int run(String[] args) throws Exception {
 		Options options = buildOptions();
 		CommandLineParser parser = new PosixParser();
@@ -111,7 +118,7 @@ public class GZRangeClientTool implements Tool {
 	    File targetDir = new File(extra[0]);
 	    String prefix = extra[1];
 	    File manifest = new File(extra[2]);
-	    
+
 	    if(!targetDir.isDirectory()) {
 	    	System.err.println("Target directory(" + extra[0] + ") is not a directory");
     		return 1;
@@ -128,12 +135,18 @@ public class GZRangeClientTool implements Tool {
 	    	System.err.println("Manifest file(" + extra[2] + ") is not readable");
     		return 1;
 	    }
-	    
+
 	    String timestamp14 = DateUtils.get14DigitDate(System.currentTimeMillis());
 	    if(line.hasOption("timestamp")) {
 	    	timestamp14 = DateUtils.get14DigitDate(DateUtils.parse14DigitDate(line.getOptionValue("timestamp")));
 	    }
-	    GZRangeClient cli = new GZRangeClient(targetDir, prefix, timestamp14);
+	    GZRangeClient cli = null;
+	    
+	    if(line.hasOption("hmacname") && line.hasOption("hmacsignature"))
+	    	cli = new GZRangeClient(targetDir, prefix, timestamp14, line.getOptionValue("hmacname"), line.getOptionValue("hmacsignature"));
+	    else
+	        cli = new GZRangeClient(targetDir, prefix, timestamp14);
+	    
 	    if(line.hasOption("arc-size")) {
 	    	cli.setMaxArcSize(Long.parseLong(line.getOptionValue("arc-size")));
 	    }
@@ -153,7 +166,7 @@ public class GZRangeClientTool implements Tool {
 	    	System.err.println("Exit on error mode");
 	    	cli.setExitOnError(true);
 	    }
-	    
+
 	    FileInputStream manIS = new FileInputStream(manifest);
 	    InputStreamReader manR = new InputStreamReader(manIS,UTF8);
 	    BufferedReader manBufR = new BufferedReader(manR);
