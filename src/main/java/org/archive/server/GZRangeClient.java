@@ -1,5 +1,4 @@
 package org.archive.server;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -14,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+import org.archive.util.HMACSigner;
 import org.archive.format.gzip.GZIPFormatException;
 import org.archive.format.gzip.GZIPMemberSeries;
 import org.archive.format.gzip.GZIPMemberWriter;
@@ -22,24 +22,20 @@ import org.archive.streamcontext.SimpleStream;
 import org.archive.util.IAUtils;
 import org.archive.util.DateUtils;
 import org.archive.util.FileNameSpec;
-
 import com.google.common.io.ByteStreams;
 import com.google.common.io.LimitInputStream;
 
 public class GZRangeClient {
-	
+
 	private final static Logger LOGGER = 
 		Logger.getLogger(GZRangeClient.class.getName());
-	
-	
+
 	private static final Charset UTF8 = Charset.forName("UTF-8");
 	private static int CR = 13;
 	private static int LF = 10;
 	private static final long DEFAULT_MAX_ARC_SIZE = 1024 * 1024 * 100;
 	private static final long DEFAULT_MAX_WARC_SIZE = 1024 * 1024 * 1024;
-	
-	
-	
+
 	private File targetDir;
 	private long maxArcSize;
 	private long maxWarcSize;
@@ -49,17 +45,20 @@ public class GZRangeClient {
 	private FileNameSpec arcNamer;
 	private File currentArc;
 	private File currentArcTmp;
-	
+
+	private String hmacName = "";
+	private String hmacSignature = "";
+
 	private File currentWarc;
 	private File currentWarcTmp;
-	
+
 	private FileOutputStream currentArcOS;
 	private long currentArcSize = 0;
 	private FileOutputStream currentWarcOS;
 	private long currentWarcSize = 0;
 	private byte[] warcHeaderContents;
 	private boolean exitOnError = false;
-	
+
 	private final static String ARC_PATTERN = 
 		"filedesc://%s 0.0.0.0 %s text/plain 76\n" +
 		"1 0 InternetArchive\n" +
@@ -110,7 +109,7 @@ http-header-from: archive-crawler-agent@lists.sourceforge.net
 	"conformsTo: http://bibnum.bnf.fr/WARC/WARC_ISO_28500_version1_latestdraft.pdf\r\n" +
 	"publisher: Internet Archive\r\n" +
 	"created: %s\r\n\r\n";
-	
+
 	private static final String defaultWarcHeaderString = String.format(
 			DEFAULT_WARC_PATTERN, 
 			IAUtils.COMMONS_VERSION, 
@@ -118,25 +117,37 @@ http-header-from: archive-crawler-agent@lists.sourceforge.net
 
 	private static final byte[] DEFAULT_WARC_HEADER_BYTES = 
 		defaultWarcHeaderString.getBytes(UTF8);
-	
+
 	public GZRangeClient(File targetDir, String prefix, String timestamp14)
 	throws ParseException {
 
 		this.targetDir = targetDir;
-
 		arcNamer = new FileNameSpec(prefix, ".arc.gz");
 		warcNamer = new FileNameSpec(prefix, ".warc.gz");
-
 		this.timestamp14 = timestamp14;
 		long msse = DateUtils.parse14DigitDate(timestamp14).getTime();
 		this.timestampZ = DateUtils.getLog17Date(msse);
-	
 		maxArcSize = DEFAULT_MAX_ARC_SIZE;
 		maxWarcSize = DEFAULT_MAX_WARC_SIZE;
 		warcHeaderContents = DEFAULT_WARC_HEADER_BYTES;
 	}
-
 	
+	public GZRangeClient(File targetDir, String prefix, String timestamp14, String hmacName, String hmacSignature)
+	throws ParseException {
+
+		this.targetDir = targetDir;
+		arcNamer = new FileNameSpec(prefix, ".arc.gz");
+		warcNamer = new FileNameSpec(prefix, ".warc.gz");
+		this.timestamp14 = timestamp14;
+		long msse = DateUtils.parse14DigitDate(timestamp14).getTime();
+		this.timestampZ = DateUtils.getLog17Date(msse);
+		maxArcSize = DEFAULT_MAX_ARC_SIZE;
+		maxWarcSize = DEFAULT_MAX_WARC_SIZE;
+		warcHeaderContents = DEFAULT_WARC_HEADER_BYTES;
+		this.hmacName = hmacName;
+		this.hmacSignature = hmacSignature;
+	}
+
 	public void finish() throws IOException {
 		closeArc();
 		closeWarc();
@@ -144,7 +155,7 @@ http-header-from: archive-crawler-agent@lists.sourceforge.net
 
 	private long getGZLength(InputStream is) 
 	throws IOException, GZIPFormatException {
-		
+
 		SimpleStream s = new SimpleStream(is);
 		GZIPMemberSeries gzs = new GZIPMemberSeries(s,"range",0,true);
 		GZIPSeriesMember m = gzs.getNextMember();
@@ -158,11 +169,16 @@ http-header-from: archive-crawler-agent@lists.sourceforge.net
 		if(first.endsWith(".arc.gz")) {
 			isArc = true;
 		} else if(first.endsWith(".warc.gz")) {
-			
+
 		} else {
 			throw new IOException("URL (" + first +
 					") must end with '.arc.gz' or '.warc.gz'");
 		}
+		
+		HMACSigner signer = null;
+		if(hmacName != null && hmacSignature != null && !hmacName.isEmpty() && !hmacSignature.isEmpty())
+			signer = new HMACSigner(hmacSignature, hmacName);
+		
 		for(String url : urls) {
 			FileBackedInputStream fbis = null;
 			InputStream is = null;
@@ -170,6 +186,8 @@ http-header-from: archive-crawler-agent@lists.sourceforge.net
 				URL u = new URL(url);
 				URLConnection conn = u.openConnection();
 				conn.setRequestProperty("Range", String.format("bytes=%d-", offset));
+				if(signer != null)	
+					conn.setRequestProperty("Cookie", signer.getHMacCookieStr(1000));
 				LOGGER.info(String.format("Attempting(%d) from(%s)",offset,url));
 				conn.connect();
 				is = conn.getInputStream();
@@ -211,8 +229,8 @@ http-header-from: archive-crawler-agent@lists.sourceforge.net
 		}
 	}
 
-	
-	
+
+
 	private String getWARCRecordID() {
 		return "urn:uuid:" + UUID.randomUUID().toString();
 	}
@@ -259,7 +277,7 @@ http-header-from: archive-crawler-agent@lists.sourceforge.net
 			closeArc();
 		}
 	}
-	
+
 	private void closeArc() throws IOException {
 		if(currentArcOS == null) {
 			return;
