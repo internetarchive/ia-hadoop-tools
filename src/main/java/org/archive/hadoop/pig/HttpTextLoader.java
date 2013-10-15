@@ -196,6 +196,13 @@ public class HttpTextLoader extends TextLoader {
 			
 			conn = (HttpURLConnection)theURL.openConnection();
 			conn.setRequestMethod("HEAD");
+			
+			String authCookie = conf.get(HttpTextLoader.HTTP_TEXTLOADER_AUTH);
+			
+			if (authCookie != null) {
+				conn.setRequestProperty("Cookie", "cdx_auth_token=" + authCookie);
+			}
+			
 			conn.connect();
 			
 			numLines = conn.getHeaderFieldInt(NUM_PAGES_HEADER_FIELD, 0);
