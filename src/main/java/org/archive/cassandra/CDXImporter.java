@@ -1,5 +1,7 @@
 package org.archive.cassandra;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.lang.math.NumberUtils;
 import org.archive.format.cdx.CDXLine;
 import org.archive.format.cdx.StandardCDXLineFactory;
@@ -63,14 +65,14 @@ public class CDXImporter {
 	}
 	
 	public void close()
-	{
-		if (session != null) {
-			session.shutdown();
-		}
+	{		
+		boolean result = false;
 		
 		if (cluster != null) {
-			cluster.shutdown();
+			result = cluster.shutdown(30, TimeUnit.SECONDS);
 		}
+		
+		System.out.println("Cluster Shutdown: " + result);
 	}
 
 	public String getCdxQuery() {

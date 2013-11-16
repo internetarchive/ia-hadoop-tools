@@ -52,6 +52,5 @@ public class CassCDXRecordWriter extends RecordWriter<Text, Text> {
             InterruptedException {
 		
 		importer.close();
-	    
     }
 }
