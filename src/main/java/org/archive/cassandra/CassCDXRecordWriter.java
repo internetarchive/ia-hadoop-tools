@@ -28,6 +28,11 @@ public class CassCDXRecordWriter extends RecordWriter<Text, Text> {
 			importer.setCdxLineFactory(new StandardCDXLineFactory(cdxFormat));
 		}
 		
+		int batchSize = conf.getInt("conf.cass.batchSize", -1);
+		if (batchSize > 0) {
+			importer.setNumToBatch(batchSize);
+		}
+		
 		importer.init(nodehost);
 	}
 	

@@ -1,11 +1,10 @@
 package org.archive.cassandra;
 
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang.math.NumberUtils;
 import org.archive.format.cdx.CDXLine;
 import org.archive.format.cdx.StandardCDXLineFactory;
 
+import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
@@ -24,6 +23,10 @@ public class CDXImporter {
 	"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	
 	protected PreparedStatement insertCdxQuery;
+	protected BatchStatement batch = null;
+	
+	protected int batchCount;
+	protected int numToBatch = 10000;
 	
 	protected StandardCDXLineFactory cdxLineFactory = new StandardCDXLineFactory("cdx11");
 
@@ -41,6 +44,7 @@ public class CDXImporter {
 		session = cluster.connect();
 		
 		insertCdxQuery = session.prepare(cdxQuery);
+		
 	}
 	
 	public void insertCdxLine(String cdxline)
@@ -61,16 +65,32 @@ public class CDXImporter {
 		BoundStatement cdxStmt = new BoundStatement(insertCdxQuery);
 		cdxStmt.bind(surt, datetime, original, mimetype, statuscode, digest, offset, length, filename);
 		
-		session.execute(cdxStmt);
+		if (batch == null) {
+			batch = new BatchStatement();
+		}
+		
+		batch.add(cdxStmt);
+		batchCount++;
+		
+		if (batchCount >= numToBatch) {
+			session.execute(batch);
+			batchCount = 0;
+			batch = null;
+		}
 	}
 	
 	public void close()
-	{		
+	{
+		if (batch != null) {
+			session.execute(batch);
+			batch = null;
+		}
+		
 		boolean result = false;
 		System.out.println("Starting Cluster Shutdown...");
 		
 		if (cluster != null) {
-			result = cluster.shutdown(30, TimeUnit.SECONDS);
+			cluster.shutdown();
 		}
 		
 		System.out.println("Cluster Shutdown: " + result);
@@ -90,6 +110,14 @@ public class CDXImporter {
 
 	public void setCdxLineFactory(StandardCDXLineFactory cdxLineFactory) {
 		this.cdxLineFactory = cdxLineFactory;
+	}
+
+	public int getNumToBatch() {
+		return numToBatch;
+	}
+
+	public void setNumToBatch(int numToBatch) {
+		this.numToBatch = numToBatch;
 	}	
 	
 }

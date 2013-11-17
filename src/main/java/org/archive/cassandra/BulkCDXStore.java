@@ -59,7 +59,7 @@ public class BulkCDXStore extends StoreFunc  {
 		
 		muts.add(createMut("statuscode", NumberUtils.toInt(cdxline.getStatusCode(), -1), timestamp));
 		muts.add(createMut("length", NumberUtils.toInt(cdxline.getLength(), -1), timestamp));
-		muts.add(createMut("offset", NumberUtils.toInt(cdxline.getOffset(), 0), timestamp));
+		muts.add(createMut("offset", NumberUtils.toLong(cdxline.getOffset(), 0), timestamp));
 		
 		muts.add(createMut("filename", cdxline.getFilename(), timestamp));
 		
