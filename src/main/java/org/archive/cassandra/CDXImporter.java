@@ -1,5 +1,7 @@
 package org.archive.cassandra;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.lang.math.NumberUtils;
 import org.archive.format.cdx.CDXLine;
 import org.archive.format.cdx.StandardCDXLineFactory;
@@ -25,7 +27,7 @@ public class CDXImporter {
 	protected PreparedStatement insertCdxQuery;
 	protected BatchStatement batch = null;
 	
-	protected int batchCount;
+	protected int batchCount = 0;
 	protected int numToBatch = 10000;
 	
 	protected StandardCDXLineFactory cdxLineFactory = new StandardCDXLineFactory("cdx11");
@@ -73,7 +75,7 @@ public class CDXImporter {
 		batchCount++;
 		
 		if (batchCount >= numToBatch) {
-			session.execute(batch);
+			session.executeAsync(batch);
 			batchCount = 0;
 			batch = null;
 		}
@@ -82,7 +84,7 @@ public class CDXImporter {
 	public void close()
 	{
 		if (batch != null) {
-			session.execute(batch);
+			session.executeAsync(batch);
 			batch = null;
 		}
 		
@@ -90,7 +92,11 @@ public class CDXImporter {
 		System.out.println("Starting Cluster Shutdown...");
 		
 		if (cluster != null) {
-			cluster.shutdown();
+			try {
+	            cluster.shutdown().get(3, TimeUnit.MINUTES);
+            } catch (Exception e) {
+        		System.out.println("Shutdown Interrupted!");
+            }
 		}
 		
 		System.out.println("Cluster Shutdown: " + result);
