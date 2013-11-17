@@ -67,6 +67,7 @@ public class CDXImporter {
 	public void close()
 	{		
 		boolean result = false;
+		System.out.println("Starting Cluster Shutdown...");
 		
 		if (cluster != null) {
 			result = cluster.shutdown(30, TimeUnit.SECONDS);
