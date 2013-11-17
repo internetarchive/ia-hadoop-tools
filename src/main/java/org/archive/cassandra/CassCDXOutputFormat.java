@@ -15,8 +15,8 @@ class CassCDXOutputFormat extends OutputFormat<Text, Text>
 	@Override
     public RecordWriter<Text, Text> getRecordWriter(TaskAttemptContext context)
             throws IOException, InterruptedException {
-		
-		return new CassCDXRecordWriter(context.getConfiguration());
+				
+		return new CassCDXRecordWriter(context);
     }
 
 	@Override

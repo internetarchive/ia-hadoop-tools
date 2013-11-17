@@ -12,8 +12,10 @@ public class CassCDXRecordWriter extends RecordWriter<Text, Text> {
 
 	protected CDXImporter importer;
 	
-	public CassCDXRecordWriter(Configuration conf)
+	public CassCDXRecordWriter(TaskAttemptContext context)
 	{
+		Configuration conf = context.getConfiguration();
+		
 		String nodehost = conf.get("conf.cass.host");
 		importer = new CDXImporter();
 		
@@ -37,7 +39,9 @@ public class CassCDXRecordWriter extends RecordWriter<Text, Text> {
 			importer.setMinuteTimeout(minuteTimeout);
 		}
 		
-		importer.init(nodehost);
+		boolean canon = conf.getBoolean("conf.cass.canon", false);
+		
+		importer.init(nodehost, context, canon);
 	}
 	
 	@Override

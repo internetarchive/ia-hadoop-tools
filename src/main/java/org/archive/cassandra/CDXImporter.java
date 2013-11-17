@@ -1,11 +1,15 @@
 package org.archive.cassandra;
 
+import java.io.IOException;
+import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.archive.format.cdx.CDXLine;
 import org.archive.format.cdx.StandardCDXLineFactory;
+import org.archive.hadoop.mapreduce.CDXMapper;
 
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BatchStatement.Type;
@@ -15,7 +19,6 @@ import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ProtocolOptions.Compression;
 import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 
@@ -39,18 +42,31 @@ public class CDXImporter {
 	
 	protected PoolingOptions pool = new PoolingOptions();
 	
-	protected ResultSetFuture lastResult;
+	protected LinkedList<ResultSetFuture> results;
+	protected int numActive = 8;
 
 	protected int minuteTimeout = 3;
 	
+	protected TaskAttemptContext context;
+	
+	protected CDXMapper cdxConverter;
+	
 
-	public void init(String node) {
+	public void init(String node, TaskAttemptContext context, boolean canon) {
 				
+		if (canon) {
+			cdxConverter = new CDXMapper();
+		}
+		
+		this.context = context;
+		
 		Cluster.Builder builder = Cluster.builder().addContactPoint(node);
 		//builder.withCompression(Compression.LZ4);
 		//builder.withPoolingOptions(pool);
 		
 		cluster = builder.build();
+		
+		results = new LinkedList<ResultSetFuture>();
 		
 		Metadata metadata = cluster.getMetadata();
 		
@@ -64,15 +80,18 @@ public class CDXImporter {
 		session = cluster.connect();
 		
 		insertCdxQuery = session.prepare(cdxQuery);
-		
 	}
 	
 	public void insertCdxLine(String cdxline)
 	{
+		if (cdxConverter != null) {
+			cdxline = cdxConverter.convertLine(cdxline);
+		}
+		
 		CDXLine line = cdxLineFactory.createStandardCDXLine(cdxline);
-		
-		
+				
 		String surt = line.getUrlKey();
+		
 		String datetime = line.getTimestamp();
 		String original = line.getOriginalUrl();
 		String mimetype = line.getMimeType();
@@ -99,37 +118,49 @@ public class CDXImporter {
 	
 	protected void sendBatch()
 	{
-		if (lastResult != null) {
+		if (results.size() == numActive) {
 			try {
-	            lastResult.getUninterruptibly(minuteTimeout, TimeUnit.MINUTES);
+            	msg("Waiting for timeout");
+				results.pollFirst().getUninterruptibly(minuteTimeout, TimeUnit.MINUTES);
             } catch (TimeoutException e) {
-            	System.err.println(e.toString());
+            	msg(e.toString());
             }
 		}
 		
-		lastResult = session.executeAsync(batch);
+		results.addLast(session.executeAsync(batch));
+		msg("Batch Sent!");
+		
 		batchCount = 0;
 		batch = null;
 	}
 	
+	private void msg(String string) {
+		System.err.println(string);
+		try {
+	        context.setStatus(string);
+        } catch (IOException e) {
+	        e.printStackTrace();
+        }
+		
+    }
+
 	public void close()
 	{
 		if (batch != null) {
 			sendBatch();
 		}
 		
-		boolean result = false;
-		System.out.println("Starting Cluster Shutdown...");
+		msg("Starting Cluster Shutdown...");
 		
 		if (cluster != null) {
 			try {
-	            cluster.shutdown().get(3, TimeUnit.MINUTES);
+	            cluster.shutdown().get(minuteTimeout, TimeUnit.MINUTES);
             } catch (Exception e) {
-        		System.out.println("Shutdown Interrupted!");
+            	msg("Shutdown Interrupted!");
             }
 		}
 		
-		System.out.println("Cluster Shutdown: " + result);
+		msg("Cluster Shutdown");
 	}
 
 	public String getCdxQuery() {
@@ -170,6 +201,5 @@ public class CDXImporter {
 
 	public void setMinuteTimeout(int minuteTimeout) {
 		this.minuteTimeout = minuteTimeout;
-	}	
-	
+	}
 }
