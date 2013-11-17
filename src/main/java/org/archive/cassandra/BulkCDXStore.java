@@ -5,9 +5,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.cassandra.db.marshal.CompositeType;
-import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.hadoop.BulkOutputFormat;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
@@ -49,14 +46,12 @@ public class BulkCDXStore extends StoreFunc  {
 		String line = concatTuple(t);
 		CDXLine cdxline = new CDXLine(line, StandardCDXLineFactory.cdx11);
 		
-		List<AbstractType<?>> compositeList = new ArrayList<AbstractType<?>>();
-		compositeList.add( UTF8Type.instance );
-		compositeList.add( UTF8Type.instance );
-		CompositeType compositeType = CompositeType.getInstance( compositeList );
-		ByteBuffer key = compositeType.builder().add(ByteBufferUtil.bytes(cdxline.getUrlKey())).add(ByteBufferUtil.bytes(cdxline.getTimestamp())).build();
+		ByteBuffer key = ByteBufferUtil.bytes(cdxline.getUrlKey());
 		
 		long timestamp = System.currentTimeMillis();
 		List<Mutation> muts = new ArrayList<Mutation>();
+		
+		muts.add(createMut("datetime", cdxline.getTimestamp(), timestamp));
 		
 		muts.add(createMut("originalurl", cdxline.getOriginalUrl(), timestamp));
 		muts.add(createMut("mimetype", cdxline.getMimeType(), timestamp));
@@ -92,7 +87,8 @@ public class BulkCDXStore extends StoreFunc  {
 	
 	protected Mutation createMut(String name, ByteBuffer value, long timestamp)
 	{
-		Column col = new Column(ByteBufferUtil.bytes(name));
+		Column col = new Column();
+		col.setName(ByteBufferUtil.bytes(name));
 		col.setValue(value);
 		col.setTimestamp(timestamp);
 		 
