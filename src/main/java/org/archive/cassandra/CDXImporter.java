@@ -47,8 +47,8 @@ public class CDXImporter {
 	public void init(String node) {
 				
 		Cluster.Builder builder = Cluster.builder().addContactPoint(node);
-		builder.withCompression(Compression.LZ4);
-		builder.withPoolingOptions(pool);
+		//builder.withCompression(Compression.LZ4);
+		//builder.withPoolingOptions(pool);
 		
 		cluster = builder.build();
 		
