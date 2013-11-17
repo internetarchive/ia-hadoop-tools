@@ -8,6 +8,7 @@ import org.archive.format.cdx.CDXLine;
 import org.archive.format.cdx.StandardCDXLineFactory;
 
 import com.datastax.driver.core.BatchStatement;
+import com.datastax.driver.core.BatchStatement.Type;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
@@ -83,7 +84,7 @@ public class CDXImporter {
 		cdxStmt.bind(surt, datetime, original, mimetype, statuscode, digest, offset, length, filename);
 		
 		if (batch == null) {
-			batch = new BatchStatement();
+			batch = new BatchStatement(Type.UNLOGGED);
 		}
 		
 		batch.add(cdxStmt);
