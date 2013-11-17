@@ -50,6 +50,8 @@ public class CDXImporter {
 		builder.withCompression(Compression.LZ4);
 		builder.withPoolingOptions(pool);
 		
+		cluster = builder.build();
+		
 		Metadata metadata = cluster.getMetadata();
 		
 		System.out.printf("Connected to cluster: %s\n",  metadata.getClusterName());
