@@ -11,7 +11,6 @@ import org.archive.format.cdx.StandardCDXLineFactory;
 public class CassCDXRecordWriter extends RecordWriter<Text, Text> {
 
 	protected CDXImporter importer;
-	protected int count = 0;
 	
 	public CassCDXRecordWriter(Configuration conf)
 	{
@@ -33,6 +32,11 @@ public class CassCDXRecordWriter extends RecordWriter<Text, Text> {
 			importer.setNumToBatch(batchSize);
 		}
 		
+		int minuteTimeout = conf.getInt("conf.cass.minuteTimeout", -1);
+		if (minuteTimeout > 0) {
+			importer.setMinuteTimeout(minuteTimeout);
+		}
+		
 		importer.init(nodehost);
 	}
 	
@@ -49,13 +53,7 @@ public class CassCDXRecordWriter extends RecordWriter<Text, Text> {
 	    } else {
 	    	cdxline = key + " " + value;
 	    }
-	    
-	    ++count;
-	    
-	    if ((count % 10000) == 0) {
-	    	System.out.println(count);
-	    }
-	    
+	    	    
 	    importer.insertCdxLine(cdxline);
     }
 

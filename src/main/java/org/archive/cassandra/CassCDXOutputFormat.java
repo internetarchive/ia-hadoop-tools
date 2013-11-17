@@ -2,7 +2,6 @@ package org.archive.cassandra;
 
 import java.io.IOException;
 
-import org.apache.cassandra.hadoop.BulkOutputFormat.NullOutputCommitter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -33,5 +32,21 @@ class CassCDXOutputFormat extends OutputFormat<Text, Text>
         
 		return new NullOutputCommitter();
     }
+	
+	public static class NullOutputCommitter extends OutputCommitter {
+		  public void abortTask(TaskAttemptContext taskContext) { }
+
+		  public void cleanupJob(JobContext jobContext) { }
+
+		  public void commitTask(TaskAttemptContext taskContext) { }
+
+		  public boolean needsTaskCommit(TaskAttemptContext taskContext) {
+		    return false;
+		  }
+
+		  public void setupJob(JobContext jobContext) { }
+
+		  public void setupTask(TaskAttemptContext taskContext) { }
+		}
 	
 }

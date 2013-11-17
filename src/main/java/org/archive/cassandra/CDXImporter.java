@@ -1,6 +1,7 @@
 package org.archive.cassandra;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang.math.NumberUtils;
 import org.archive.format.cdx.CDXLine;
@@ -11,7 +12,10 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.ProtocolOptions.Compression;
+import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 
 public class CDXImporter {
@@ -31,9 +35,20 @@ public class CDXImporter {
 	protected int numToBatch = 10000;
 	
 	protected StandardCDXLineFactory cdxLineFactory = new StandardCDXLineFactory("cdx11");
+	
+	protected PoolingOptions pool = new PoolingOptions();
+	
+	protected ResultSetFuture lastResult;
+
+	protected int minuteTimeout = 3;
+	
 
 	public void init(String node) {
-		cluster = Cluster.builder().addContactPoint(node).build();
+				
+		Cluster.Builder builder = Cluster.builder().addContactPoint(node);
+		builder.withCompression(Compression.LZ4);
+		builder.withPoolingOptions(pool);
+		
 		Metadata metadata = cluster.getMetadata();
 		
 		System.out.printf("Connected to cluster: %s\n",  metadata.getClusterName());
@@ -75,17 +90,29 @@ public class CDXImporter {
 		batchCount++;
 		
 		if (batchCount >= numToBatch) {
-			session.executeAsync(batch);
-			batchCount = 0;
-			batch = null;
+			sendBatch();
 		}
+	}
+	
+	protected void sendBatch()
+	{
+		if (lastResult != null) {
+			try {
+	            lastResult.getUninterruptibly(minuteTimeout, TimeUnit.MINUTES);
+            } catch (TimeoutException e) {
+            	System.err.println(e.toString());
+            }
+		}
+		
+		lastResult = session.executeAsync(batch);
+		batchCount = 0;
+		batch = null;
 	}
 	
 	public void close()
 	{
 		if (batch != null) {
-			session.executeAsync(batch);
-			batch = null;
+			sendBatch();
 		}
 		
 		boolean result = false;
@@ -124,6 +151,22 @@ public class CDXImporter {
 
 	public void setNumToBatch(int numToBatch) {
 		this.numToBatch = numToBatch;
+	}
+
+	public PoolingOptions getPool() {
+		return pool;
+	}
+
+	public void setPool(PoolingOptions pool) {
+		this.pool = pool;
+	}
+
+	public int getMinuteTimeout() {
+		return minuteTimeout;
+	}
+
+	public void setMinuteTimeout(int minuteTimeout) {
+		this.minuteTimeout = minuteTimeout;
 	}	
 	
 }
