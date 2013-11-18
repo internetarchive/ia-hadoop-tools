@@ -189,8 +189,8 @@ public class GZRangeClientTool implements Tool {
 	    	}
 	    	ArrayList<String> urls = new ArrayList<String>();
 	    	for(int i = 1; i < parts.length; i++) {
-	    		if(!parts[i].startsWith("http://")) {
-		    		System.err.format("URL in Line(%s) does not start with http://\n",manLine);
+	    		if(!(parts[i].startsWith("http://") || parts[i].startsWith("hdfs://"))) {
+		    		System.err.format("URL in Line(%s) does not start with http:// or hdfs://\n",manLine);
 		    		System.exit(1);	    			
 	    		}
 	    		urls.add(parts[i]);

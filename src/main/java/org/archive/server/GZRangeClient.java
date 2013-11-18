@@ -12,7 +12,14 @@ import java.text.ParseException;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
+import java.net.URI;
+import java.net.URISyntaxException;
 
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.archive.util.HMACSigner;
 import org.archive.format.gzip.GZIPFormatException;
 import org.archive.format.gzip.GZIPMemberSeries;
@@ -48,6 +55,8 @@ public class GZRangeClient {
 
 	private String hmacName = "";
 	private String hmacSignature = "";
+
+	protected static FileSystem hdfsSys = null;
 
 	private File currentWarc;
 	private File currentWarcTmp;
@@ -183,14 +192,28 @@ http-header-from: archive-crawler-agent@lists.sourceforge.net
 			FileBackedInputStream fbis = null;
 			InputStream is = null;
 			try {
-				URL u = new URL(url);
-				URLConnection conn = u.openConnection();
-				conn.setRequestProperty("Range", String.format("bytes=%d-", offset));
-				if(signer != null)	
-					conn.setRequestProperty("Cookie", signer.getHMacCookieStr(1000));
-				LOGGER.info(String.format("Attempting(%d) from(%s)",offset,url));
-				conn.connect();
-				is = conn.getInputStream();
+				if(url.startsWith("http://")) {
+					URL u = new URL(url);
+					URLConnection conn = u.openConnection();
+					conn.setRequestProperty("Range", String.format("bytes=%d-", offset));
+					if(signer != null)	
+						conn.setRequestProperty("Cookie", signer.getHMacCookieStr(1000));
+					LOGGER.info(String.format("Attempting(%d) from(%s)",offset,url));
+					conn.connect();
+					is = conn.getInputStream();
+				} else if(url.startsWith("hdfs://")){
+					URI u = new URI(url);
+					//only initialize the FS once
+					if (hdfsSys == null) {
+						Configuration conf = new Configuration();
+						URI defaultURI = new URI(u.getScheme() + "://" + u.getHost() + ":"+ u.getPort() + "/");
+						hdfsSys = FileSystem.get(defaultURI, conf);
+					}
+					Path path = new Path(u.getPath());
+					FSDataInputStream fis = hdfsSys.open(path);
+					fis.seek(offset);
+					is = fis;
+				}
 				fbis = new FileBackedInputStream(is);
 				long length = getGZLength(fbis);
 				InputStream orig = fbis.getInputStream();
@@ -203,6 +226,8 @@ http-header-from: archive-crawler-agent@lists.sourceforge.net
 						offset,url));
 				return;
 			} catch (IOException e) {
+				LOGGER.warning("FAILED URL-OFFSET("+url+")(" + offset+")");
+			} catch (URISyntaxException e) { 
 				LOGGER.warning("FAILED URL-OFFSET("+url+")(" + offset+")");
 			} finally {
 				if(is != null) {
