@@ -29,6 +29,7 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.archive.format.cdx.CDXLine;
 import org.archive.format.cdx.StandardCDXLineFactory;
 import org.archive.hadoop.mapreduce.CDXMapper;
+import org.archive.util.zip.OpenJDK7GZIPInputStream;
 
 public class CDXToSSTable {
 	
@@ -134,6 +135,9 @@ public class CDXToSSTable {
 				in = System.in;
 			} else {
 				in = new FileInputStream(input);
+				if (input.endsWith(".gz")) {
+					in = new OpenJDK7GZIPInputStream(in);
+				}
 			}
 			
 			cdxTosst = new CDXToSSTable(outdir, format, keyspace, cf, compressor, convert);
@@ -163,7 +167,7 @@ public class CDXToSSTable {
 			try {
 				cdxline = cdxConverter.convertLine(cdxline);
 			} catch (Exception e) {
-				System.err.println("Skipping " + cdxline + " due to " + e.toString());
+				//System.err.println("Skipping " + cdxline + " due to " + e.toString());
 				return;
 			}
 		}
