@@ -11,10 +11,14 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,6 +32,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 import org.apache.http.HttpEntity;
@@ -76,6 +81,12 @@ public class PetaboxFileSystem extends FileSystem {
 
 	// metadata cache
 	private LRUMap metadataCache = new LRUMap(200);
+	/**
+	 * maximum number of concurrent metadata API queries
+	 * (i.e. max number of threads to be used for making metadata API
+	 * queries)
+	 */
+    private int maxMetadataConcurrency = 10;
 
 
 	private Class<? extends ItemSearcher> itemSearcherClass = SearchEngineItemSearcher.class;
@@ -220,6 +231,9 @@ public class PetaboxFileSystem extends FileSystem {
 			}
 			this.fileTypes = a;
 		}
+		
+		maxMetadataConcurrency = conf.getInt(confbase + ".max-metadata-concurrency",
+		        maxMetadataConcurrency);
 
 		LOG.info("PetaboxFileSystem.initialize:fsUri=" + fsUri);
 		if (defaultInstance == null)
@@ -269,11 +283,16 @@ public class PetaboxFileSystem extends FileSystem {
 		}
 	}
 	protected ItemMetadata getItemMetadata(String itemid) throws IOException {
-		ItemMetadata md = (ItemMetadata)metadataCache.get(itemid);
+		ItemMetadata md;
+		synchronized (metadataCache) {
+		    md = (ItemMetadata)metadataCache.get(itemid);
+		}
 		if (md == null) {
 			md = pbclient.getItemMetadata(itemid);
 			if (md != null) {
-				metadataCache.put(itemid, md);
+			    synchronized (metadataCache) {
+			        metadataCache.put(itemid, md);
+			    }
 			}
 		}
 		return md;
@@ -416,6 +435,8 @@ public class PetaboxFileSystem extends FileSystem {
 	 * @throws IOException
 	 */
 	protected FileStatus[] searchItems(String itemid) throws IOException {
+	    LOG.info("querying items in collection " + itemid + " with " + 
+	            itemSearcher.getClass().getName());
 		return itemSearcher.searchItems(itemid);
 	}
 
@@ -447,7 +468,7 @@ public class PetaboxFileSystem extends FileSystem {
 				return searchItems(itemid);
 			}
 			// for regular item, return list of files in it.
-			LOG.info("enumerating files in item " + itemid);
+			LOG.debug("enumerating files in item " + itemid);
 			if (md.getFiles() != null) {
 				List<FileStatus> files = new ArrayList<FileStatus>();
 				Path qf = makeQualified(f);
@@ -469,7 +490,69 @@ public class PetaboxFileSystem extends FileSystem {
 			return new FileStatus[0];
 		}
 	}
+	
+	class ListStatusTask implements Runnable {
+	    private List<FileStatus> results;
+	    private Path file;
+	    private PathFilter filter;
+	    public ListStatusTask(List<FileStatus> results, Path file, PathFilter filter) {
+	        this.results = results;
+	        this.file = file;
+	        this.filter = filter;
+	    }
+	    @Override
+	    public void run() {
+	        try {
+	            FileStatus listing[] = listStatus(file);
+	            if (listing != null) {
+	                for (FileStatus s : listing) {
+	                    if (filter.accept(s.getPath())) {
+	                        results.add(s);
+	                    }
+	                }
+	            }
+	        } catch (IOException ex) {
+	            // TODO: would want to abort the job if too many
+	            // items are failing to resolve.
+	            LOG.error("listStatus(" + file + " failed", ex);
+	        }
+	    }
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 * <p>overridden to make concurrent metadata API queries for large
+	 * number of {@code files} (currently threashold is hard-coded as 50).
+	 * maximum number of concurrent queries is controlled by
+	 * configuration parameter {@code max-metadata-concurrency}.</p>
+	 */
+	@Override
+	public FileStatus[] listStatus(Path[] files, PathFilter filter)
+	        throws IOException {
+	    // don't use multiple threads for small number of files.
+	    if (files.length < 50 || maxMetadataConcurrency < 2) {
+	        return super.listStatus(files, filter);
+	    }
 
+	    LOG.info("listing files in " + files.length + " paths concurrently.");
+	    ExecutorService executor = Executors.newFixedThreadPool(
+	            Math.min(maxMetadataConcurrency, files.length));
+	    List<FileStatus> results = Collections.synchronizedList(new ArrayList<FileStatus>());
+	    for (Path file : files) {
+	        // listStatus(Path) can return something only for Path of depth==1.
+	        if (file.depth() == 1) {
+	            executor.execute(new ListStatusTask(results, file, filter));
+	        }
+	    }
+	    executor.shutdown();
+	    try {
+	        executor.awaitTermination(24L, TimeUnit.HOURS);
+	    } catch (InterruptedException ex) {
+	        throw new IOException("interrupted.");
+	    }
+	    return results.toArray(new FileStatus[results.size()]);
+	}
+	
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.fs.FileSystem#mkdirs(org.apache.hadoop.fs.Path, org.apache.hadoop.fs.permission.FsPermission)
 	 */
@@ -554,8 +637,7 @@ public class PetaboxFileSystem extends FileSystem {
 		if (file == null) return null;
 		if (start < 0 || len < 0) throw new IllegalArgumentException("Invalid start or len parameter");
 		if (file.getLen() < start) return new BlockLocation[0];
-		// TODO: cache metadata. this method will be called for each input path. IA
-		// metadata API is pretty fast, yet making identical queries is waste of cpu & bandwidth. 
+
 		Path f = file.getPath();
 		if (f.depth() == 2) {
 			// Path is qualified.
@@ -594,5 +676,6 @@ public class PetaboxFileSystem extends FileSystem {
 		} else {
 			return new BlockLocation[0];
 		}
-	}
+	}	
 }
+	

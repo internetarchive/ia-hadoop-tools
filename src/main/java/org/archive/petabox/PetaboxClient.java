@@ -120,7 +120,7 @@ public class PetaboxClient {
 		HttpParams params = get.getParams();
 		HttpConnectionParams.setConnectionTimeout(params, metadataConnectionTimeout);
 		HttpConnectionParams.setSoTimeout(params, metadataSocketTimeout);
-		LOG.info("fetching metadata for item '" + itemid + "'");
+		LOG.debug("fetching metadata for item '" + itemid + "'");
 		HttpEntity entity = null;
 		int retries = 0;
 		ItemMetadata md = null;
