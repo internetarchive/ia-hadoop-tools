@@ -115,6 +115,10 @@ public class JobDriver {
 					CDXGenerator.class,
 					CDXGenerator.TOOL_DESCRIPTION);
 			
+			pgd.addClass(WARCMetadataRecordGenerator.TOOL_NAME,
+					WARCMetadataRecordGenerator.class,
+					WARCMetadataRecordGenerator.TOOL_DESCRIPTION);
+			
 			pgd.addClass(MergeCluster.TOOL_NAME,
 					MergeCluster.class,
 					MergeCluster.TOOL_DESCRIPTION);			
