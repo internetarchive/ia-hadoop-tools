@@ -106,6 +106,14 @@ public class JobDriver {
 			pgd.addClass(WATExtractorJob.TOOL_NAME,
 					WATExtractorJob.class,
 					WATExtractorJob.TOOL_DESCRIPTION);
+					
+			pgd.addClass(WATGenerator.TOOL_NAME,
+					WATGenerator.class,
+					WATGenerator.TOOL_DESCRIPTION);
+			
+			pgd.addClass(CDXGenerator.TOOL_NAME,
+					CDXGenerator.class,
+					CDXGenerator.TOOL_DESCRIPTION);
 			
 			pgd.addClass(MergeCluster.TOOL_NAME,
 					MergeCluster.class,
