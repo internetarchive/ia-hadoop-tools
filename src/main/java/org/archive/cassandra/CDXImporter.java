@@ -136,11 +136,11 @@ public class CDXImporter {
 	
 	private void msg(String string) {
 		System.err.println(string);
-		try {
-	        context.setStatus(string);
-        } catch (IOException e) {
-	        e.printStackTrace();
-        }
+	//	try {
+	  //      context.setStatus(string);
+        //} catch (IOException e) {
+	 //       e.printStackTrace();
+       // }
 		
     }
 
