@@ -98,21 +98,42 @@ public class WATGenerator extends Configured implements Tool {
 			String path = key.toString();
 			LOG.info( "Start: "  + path );
 
+			FSDataInputStream fis = null;
+			Path inputPath = null;
+			String inputBasename = null;
+			String outputBasename = null;
+
+			String outputFileString = null;
+			FSDataOutputStream fsdOut = null;
+
+			//get input stream
 			try {
-				FSDataInputStream fis = null;
-				Path inputPath = new Path(path);
+				inputPath = new Path(path);
 				fis = FileSystem.get( new java.net.URI( path ), this.jobConf ).open( inputPath );
 			
-				String inputBasename = inputPath.getName();
-				String outputBasename = "";
+				inputBasename = inputPath.getName();
 			
 				if(path.endsWith(".gz")) {
 					outputBasename = inputBasename.substring(0,inputBasename.length()-3) + ".wat.gz";
 				} else {
 					outputBasename = inputBasename + ".wat.gz";
 				}
-				String outputFileString = this.jobConf.get("outputDir") + "/" + outputBasename;
-				FSDataOutputStream fsdOut = FileSystem.get( new java.net.URI( outputFileString ), this.jobConf ).create(new Path (outputFileString), false); 
+			} catch (Exception e) {
+                                LOG.error( "Error opening input file to process: " + path, e );
+                                throw new IOException( e );
+                        }
+			
+			//open output file handle
+			try {
+				outputFileString = this.jobConf.get("outputDir") + "/" + outputBasename;
+				fsdOut = FileSystem.get( new java.net.URI( outputFileString ), this.jobConf ).create(new Path (outputFileString), false); 
+			} catch (Exception e) {
+				LOG.error( "Error opening output file: " + outputFileString, e );
+				throw new IOException( e );
+			}
+
+			//data generation phase 
+			try {
 				ExtractorOutput out;
 				out = new WATExtractorOutput(fsdOut);
 				ResourceProducer producer = ProducerUtils.getProducer(path.toString());
@@ -131,7 +152,7 @@ public class WATGenerator extends Configured implements Tool {
 				fsdOut.close();
 			} catch ( Exception e ) {
 				LOG.error( "Error processing file: " + path, e );
-				if ( this.jobConf.getBoolean( "strictMode", true ) ) {
+				if ( ! this.jobConf.getBoolean( "soft", false ) ) {
 					throw new IOException( e );
 				}
 			} finally {
@@ -162,11 +183,13 @@ public class WATGenerator extends Configured implements Tool {
 		// This is a map-only job, no reducers.
 		job.setNumReduceTasks(0);
 
+		// turn off speculative execution
+                job.setBoolean("mapred.map.tasks.speculative.execution",false);
+
 		// set timeout to a high value - 20 hours
 		job.setInt("mapred.task.timeout",72000000);
 	
-		// keep job running despite some failures in generating WATs
-		job.setBoolean("strictMode",false);
+		job.setBoolean("soft",false);
 	
 		job.setOutputFormat(TextOutputFormat.class);
 		job.setOutputKeyClass(Text.class);
@@ -175,9 +198,9 @@ public class WATGenerator extends Configured implements Tool {
 		job.setJarByClass(WATGenerator.class);
 
 		int arg = 0;
-		if(args[arg].equals("-strictMode")) {
-			job.setBoolean("strictMode",true);
-		arg++;
+		if(args[arg].equals("-soft")) {
+			job.setBoolean("soft",true);
+			arg++;
 		}
 
 		String outputDir = args[arg];
@@ -215,6 +238,7 @@ public class WATGenerator extends Configured implements Tool {
 	*/
 	public void usage( ) {
 		String usage =  "Usage: WATGenerator <outputDir> <(w)arcfile>...\n" ;
+		usage+=  "Options: -soft (keep job running despite some failures)\n" ;
 		System.out.println( usage );
 	}
 

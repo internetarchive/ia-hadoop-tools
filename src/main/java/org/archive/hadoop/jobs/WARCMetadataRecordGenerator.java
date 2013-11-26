@@ -98,22 +98,42 @@ public class WARCMetadataRecordGenerator extends Configured implements Tool {
 		public void map( Text key, Text value, OutputCollector output, Reporter reporter )throws IOException {
 			String path = key.toString();
 			LOG.info( "Start: "  + path );
+			
+			FSDataInputStream fis = null;
+			Path inputPath = null;
+			String inputBasename = null;
+			String outputBasename = null;
+
+			String outputFileString = null;
+			FSDataOutputStream fsdOut = null;
 
 			try {
-				FSDataInputStream fis = null;
-				Path inputPath = new Path(path);
+				inputPath = new Path(path);
 				fis = FileSystem.get( new java.net.URI( path ), this.jobConf ).open( inputPath );
 			
-				String inputBasename = inputPath.getName();
-				String outputBasename = "";
+				inputBasename = inputPath.getName();
 			
 				if(path.endsWith(".gz")) {
 					outputBasename = inputBasename.substring(0,inputBasename.length()-3) + ".metadata";
 				} else {
 					outputBasename = inputBasename + ".metadata";
 				}
-				String outputFileString = this.jobConf.get("outputDir") + "/" + outputBasename;
-				FSDataOutputStream fsdOut = FileSystem.get( new java.net.URI( outputFileString ), this.jobConf ).create(new Path (outputFileString), false); 
+			} catch (Exception e) {
+                                LOG.error( "Error opening input file to process: " + path, e );
+                                throw new IOException( e );
+                        }
+			
+			//open output file handle
+			try {
+				outputFileString = this.jobConf.get("outputDir") + "/" + outputBasename;
+				fsdOut = FileSystem.get( new java.net.URI( outputFileString ), this.jobConf ).create(new Path (outputFileString), false); 
+			} catch (Exception e) {
+				LOG.error( "Error opening output file: " + outputFileString, e );
+				throw new IOException( e );
+			}
+			
+			//data generation phase 
+			try {	
 				ExtractorOutput out;
 				out = new WARCMetadataRecordExtractorOutput(new PrintWriter(fsdOut),this.jobConf.get("outputType"));
 				ResourceProducer producer = ProducerUtils.getProducer(path.toString());
@@ -132,9 +152,7 @@ public class WARCMetadataRecordGenerator extends Configured implements Tool {
 				fsdOut.close();
 			} catch ( Exception e ) {
 				LOG.error( "Error processing file: " + path, e );
-				//if ( this.jobConf.getBoolean( "strictMode", true ) ) {
 					throw new IOException( e );
-				//}
 			} finally {
 				LOG.info( "Finish: "  + path );
 			}
@@ -162,6 +180,9 @@ public class WARCMetadataRecordGenerator extends Configured implements Tool {
 
 		// This is a map-only job, no reducers.
 		job.setNumReduceTasks(0);
+
+		// turn off speculative execution
+                job.setBoolean("mapred.map.tasks.speculative.execution",false);
 
 		// set timeout to a high value - 20 hours
 		job.setInt("mapred.task.timeout",72000000);
