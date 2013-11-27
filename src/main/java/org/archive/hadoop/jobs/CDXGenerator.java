@@ -237,7 +237,7 @@ public class CDXGenerator extends Configured implements Tool {
 	* Emit usage information for command-line driver.
 	*/
 	public void usage( ) {
-		String usage =  "Usage: CDXGenerator <outputDir> <(w)arcfile>...\n" ;
+		String usage =  "Usage: CDXGenerator [OPTIONS] <outputDir> <(w)arcfile>...\n" ;
 		usage+=  "Options: -soft (keep job running despite some failures)\n" ;
 		System.out.println( usage );
 	}

@@ -184,7 +184,7 @@ public class WATGenerator extends Configured implements Tool {
 		job.setNumReduceTasks(0);
 
 		// turn off speculative execution
-                job.setBoolean("mapred.map.tasks.speculative.execution",false);
+        job.setBoolean("mapred.map.tasks.speculative.execution",false);
 
 		// set timeout to a high value - 20 hours
 		job.setInt("mapred.task.timeout",72000000);
@@ -237,7 +237,7 @@ public class WATGenerator extends Configured implements Tool {
 	* Emit usage information for command-line driver.
 	*/
 	public void usage( ) {
-		String usage =  "Usage: WATGenerator <outputDir> <(w)arcfile>...\n" ;
+		String usage =  "Usage: WATGenerator [OPTIONS] <outputDir> <(w)arcfile>...\n" ;
 		usage+=  "Options: -soft (keep job running despite some failures)\n" ;
 		System.out.println( usage );
 	}

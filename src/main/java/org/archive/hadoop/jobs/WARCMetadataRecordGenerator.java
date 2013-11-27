@@ -182,7 +182,7 @@ public class WARCMetadataRecordGenerator extends Configured implements Tool {
 		job.setNumReduceTasks(0);
 
 		// turn off speculative execution
-                job.setBoolean("mapred.map.tasks.speculative.execution",false);
+        job.setBoolean("mapred.map.tasks.speculative.execution",false);
 
 		// set timeout to a high value - 20 hours
 		job.setInt("mapred.task.timeout",72000000);

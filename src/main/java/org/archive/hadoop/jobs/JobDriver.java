@@ -119,6 +119,10 @@ public class JobDriver {
 			pgd.addClass(WARCMetadataRecordGenerator.TOOL_NAME,
 					WARCMetadataRecordGenerator.class,
 					WARCMetadataRecordGenerator.TOOL_DESCRIPTION);
+					
+			pgd.addClass(ArchiveFileExtractor.TOOL_NAME,
+					ArchiveFileExtractor.class,
+					ArchiveFileExtractor.TOOL_DESCRIPTION);
 			
 			pgd.addClass(MergeCluster.TOOL_NAME,
 					MergeCluster.class,

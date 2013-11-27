@@ -11,7 +11,7 @@ public class FileBackedInputStream extends FilterInputStream {
 
 	public static int MAX_RAM = 1024 * 1024 * 2;
 
-	protected FileBackedInputStream(InputStream in) {
+	public FileBackedInputStream(InputStream in) {
 		super(in);
 		backer = new FileBackedOutputStream(MAX_RAM,false);
 	}
