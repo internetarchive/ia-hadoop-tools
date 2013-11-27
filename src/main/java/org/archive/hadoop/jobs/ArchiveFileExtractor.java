@@ -331,8 +331,10 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 						LimitInputStream lis = new LimitInputStream(orig, length);
 						ByteStreams.copy(lis, currentWarcOS);
 					}
+					output.collect("SUCCESS",offset + "\t" + url);
 				} catch (Exception e) {
 					LOG.error( "Error processing: ", e );
+					output.collect("FAIL",offset + "\t" + url);
 					if ( ! this.jobConf.getBoolean( "soft", false ) ) {
 						throw new IOException( e.toString() + "offset:" + offset + "url:" + url );
 					}
