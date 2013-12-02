@@ -165,7 +165,7 @@ public class CDXGenerator extends Configured implements Tool {
 	*/
 	public int run( String[] args ) throws Exception {
 		if ( args.length < 2 ) {
-			usage();
+			printUsage();
 			return 1;
 		}
 
@@ -188,7 +188,7 @@ public class CDXGenerator extends Configured implements Tool {
 		// set timeout to a high value - 20 hours
 		job.setInt("mapred.task.timeout",72000000);
 	
-		//fail on task failures
+		//tolerate task exceptions
 		job.setBoolean("soft",false);
 	
 		job.setOutputFormat(TextOutputFormat.class);
@@ -198,11 +198,30 @@ public class CDXGenerator extends Configured implements Tool {
 		job.setJarByClass(CDXGenerator.class);
 
 		int arg = 0;
-		if(args[arg].equals("-soft")) {
-			job.setBoolean("soft",true);
-			arg++;
+		while (arg < args.length - 1) {
+			if(args[arg].equals("-soft")) {
+				job.setBoolean("soft",true);
+				arg++;
+			} else if(args[arg].equals("-timeout")) {
+				arg++;
+				int taskTimeout = Integer.parseInt(args[arg]);
+				job.setInt("mapred.task.timeout",taskTimeout);
+				arg++;
+			} else if(args[arg].equals("-failpct")) {
+				arg++;
+				int failPct = Integer.parseInt(args[arg]);
+				job.setInt("mapred.max.map.failures.percent",failPct);
+				arg++;
+			} else {
+				break;
+			}
 		}
-
+		
+		if(args.length - 2 < arg) {
+			printUsage();
+			return 1;
+		}
+		
 		String outputDir = args[arg];
 		arg++;
 
@@ -232,16 +251,19 @@ public class CDXGenerator extends Configured implements Tool {
 		}
 		return 0;
 	}
-
-	/**
-	* Emit usage information for command-line driver.
+	
+	/** 
+	* Print usage
 	*/
-	public void usage( ) {
-		String usage =  "Usage: CDXGenerator [OPTIONS] <outputDir> <(w)arcfile>...\n" ;
-		usage+=  "Options: -soft (keep job running despite some failures)\n" ;
-		System.out.println( usage );
+	public void printUsage() {
+		String usage = "Usage: CDXGenerator [OPTIONS] <outputDir> <(w)arcfile>...\n";
+		usage+="\tOptions:\n";
+		usage+="\t\t-timeout MILLISECONDS - mapred.task.timeout setting (default: 72000000)\n";
+		usage+="\t\t-soft - tolerate task exceptions\n";
+		usage+="\t\t-failpct PCT - mapred.max.map.failures.percent (default: 0). Set to 10 to allow 10% of map tasks to fail\n";
+		System.out.println(usage);
 	}
-
+	
 	/**
 	* Command-line driver.  Runs the CDXGenerator as a Hadoop job.
 	*/

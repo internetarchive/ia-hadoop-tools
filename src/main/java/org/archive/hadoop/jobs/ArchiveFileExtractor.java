@@ -124,8 +124,6 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 		private String timestamp14;
 		private String timestampZ;
 		
-		
-
 		private byte[] warcHeaderContents;
 
 		private final static String ARC_PATTERN = 
@@ -362,12 +360,14 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 	public void printUsage() {
 		String usage = "Usage: ArchiveFileExtractor [OPTIONS] <taskfile> <outputdir>\n";
 		usage+="\tOptions:\n";
-		usage+="\t\t-mappers NUM - try to run with approximately NUM map tasks\n";
+		usage+="\t\t-mappers NUM - try to run with approximately NUM map tasks (default: 10)\n";
 		usage+="\t\t-timestamp14 TS - The 14 digit timestamp to use\n";
 		usage+="\t\t-hmacname HMACNAME - The HMAC Name string\n";
 		usage+="\t\t-hmacsignature HMACSIG - The HMAC Signature string\n";
 		usage+="\t\t-warc-header-local-file LOCALPATH_TO_WARCHEADERFILE - The local file containing the WARC header to use\n";
-		usage+="\t\t-soft - tolerate some task failures\n";
+		usage+="\t\t-soft - tolerate task exceptions\n";
+		usage+="\t\t-timeout MILLISECONDS - mapred.task.timeout setting (default: 72000000)\n";
+		usage+="\t\t-failpct PCT - mapred.max.map.failures.percent (default: 0). Set to 10 to allow 10% of map tasks to fail\n";
 		usage+="\tThe taskfile contains lines of the form:\n";
 		usage+="\t\tFilePrefix<tab>Bag of (offset,FilePath) tuples\n";
 		usage+="\t\tFilePrefix is the prefix to be used by the extracted files\n";
@@ -400,6 +400,7 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 		// set timeout to a high value - 20 hours
 		job.setInt("mapred.task.timeout",72000000);
 	
+		//tolerate task exceptions
 		job.setBoolean("soft",false);
 
 		int arg = 0;
@@ -446,6 +447,16 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 				String hmacSignature = args[arg];
 				job.set("hmacSignature",hmacSignature);
 				arg++;
+			} else if(args[arg].equals("-timeout")) {
+				arg++;
+				int taskTimeout = Integer.parseInt(args[arg]);
+				job.setInt("mapred.task.timeout",taskTimeout);
+				arg++;
+			} else if(args[arg].equals("-failpct")) {
+				arg++;
+				int failPct = Integer.parseInt(args[arg]);
+				job.setInt("mapred.max.map.failures.percent",failPct);
+				arg++;
 			} else {
 				break;
 			}
@@ -474,7 +485,6 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 		job.setMapperClass(ArchiveFileExtractorMapper.class);
 		job.setJarByClass(ArchiveFileExtractor.class);
 
-		
 		TextInputFormat.addInputPath(job, inputPath);
 		FileOutputFormat.setOutputPath(job, outputPath);
 	

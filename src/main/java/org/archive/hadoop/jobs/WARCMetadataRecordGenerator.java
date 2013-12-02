@@ -164,7 +164,7 @@ public class WARCMetadataRecordGenerator extends Configured implements Tool {
 	*/
 	public int run( String[] args ) throws Exception {
 		if ( args.length < 2 ) {
-			usage();
+			printUsage();
 			return 1;
 		}
 
@@ -195,12 +195,32 @@ public class WARCMetadataRecordGenerator extends Configured implements Tool {
 
 		//extract outlinks by default
 		job.set("outputType","outlinks");
+		
 		int arg = 0;
-		if(args[arg].equals("-hopinfo")) {
-			job.set("outputType","hopinfo");
-		arg++;
+		while (arg < args.length - 1) {
+			if(args[arg].equals("-hopinfo")) {
+				job.set("outputType","hopinfo");
+				arg++;
+			} else if(args[arg].equals("-timeout")) {
+				arg++;
+				int taskTimeout = Integer.parseInt(args[arg]);
+				job.setInt("mapred.task.timeout",taskTimeout);
+				arg++;
+			} else if(args[arg].equals("-failpct")) {
+				arg++;
+				int failPct = Integer.parseInt(args[arg]);
+				job.setInt("mapred.max.map.failures.percent",failPct);
+				arg++;
+			} else {
+				break;
+			}
 		}
-
+		
+		if(args.length - 2 < arg) {
+			printUsage();
+			return 1;
+		}
+	
 		String outputDir = args[arg];
 		arg++;
 
@@ -231,12 +251,16 @@ public class WARCMetadataRecordGenerator extends Configured implements Tool {
 		return 0;
 	}
 
-	/**
-	* Emit usage information for command-line driver.
+	/** 
+	* Print usage
 	*/
-	public void usage( ) {
-		String usage =  "Usage: WARCMetadataRecordGenerator <outputDir> <(w)arcfile>...\n" ;
-		System.out.println( usage );
+	public void printUsage() {
+		String usage = "Usage: WARCMetadataRecordGenerator [OPTIONS] <outputDir> <(w)arcfile>...\n";
+		usage+="\tOptions:\n";
+		usage+="\t\t-timeout MILLISECONDS - mapred.task.timeout setting (default: 72000000)\n";
+		usage+="\t\t-hopinfo - print hopinfo lines instead of outlinks (default)\n";
+		usage+="\t\t-failpct PCT - mapred.max.map.failures.percent (default: 0). Set to 10 to allow 10% of map tasks to fail\n";
+		System.out.println(usage);
 	}
 
 	/**
