@@ -120,43 +120,63 @@ public class CDXGenerator extends Configured implements Tool {
 				throw new IOException( e );
 			}
 
-			String outputFileString = null;
+			String tempOutputFileString = null;
+			String destOutputFileString = null;
 			FSDataOutputStream fsdOut = null;
+			long millis = System.currentTimeMillis();
 
 			//open output file handle
 			try {
-				outputFileString = this.jobConf.get("outputDir") + "/" + outputBasename;
-				fsdOut = FileSystem.get( new java.net.URI( outputFileString ), this.jobConf ).create(new Path (outputFileString), false);
+				destOutputFileString = this.jobConf.get("outputDir") + "/" + outputBasename;
+				tempOutputFileString =  destOutputFileString + "." + millis + ".TMP";
+				fsdOut = FileSystem.get( new java.net.URI( tempOutputFileString ), this.jobConf ).create(new Path (tempOutputFileString), false);
 			} catch (Exception e) {
-				LOG.error( "Error opening output file: " + outputFileString, e );
+				LOG.error( "Error opening output file: " + tempOutputFileString, e );
 				throw new IOException( e );
 			} 
 			// data generation phase
-			try {
-				ExtractorOutput out;
-				out = new RealCDXExtractorOutput(new PrintWriter(fsdOut));
-				ResourceProducer producer = ProducerUtils.getProducer(path.toString());
-				ResourceFactoryMapper mapper = new ExtractingResourceFactoryMapper();
-				ExtractingResourceProducer exProducer = new ExtractingResourceProducer(producer, mapper);
+			ExtractorOutput out;
+			ResourceProducer producer;
+			ResourceFactoryMapper mapper;
+			ExtractingResourceProducer exProducer;
 
-				int count = 0;
-				while(count < Integer.MAX_VALUE) {
-					Resource r = exProducer.getNext();
+			try {
+				out = new RealCDXExtractorOutput(new PrintWriter(fsdOut));
+				producer = ProducerUtils.getProducer(path.toString());
+				mapper = new ExtractingResourceFactoryMapper();
+				exProducer = new ExtractingResourceProducer(producer, mapper);
+			} catch ( Exception e ) {
+				LOG.error( "Error processing file (before record writes): " + path, e );
+				throw new IOException( e );
+			}
+
+			int count = 0;
+			Resource r = null;
+			while(count < Integer.MAX_VALUE) {
+				try {
+					r = exProducer.getNext();
 					if(r == null) {
 						break;
 					}
-					count++;
 					out.output(r);
+				} catch ( Exception e ) {
+
+					LOG.error( "Error processing file (record): " + path, e );
+					if ( ! this.jobConf.getBoolean( "soft", false ) ) {
+						throw new IOException( e );
+					}
 				}
+				count++;
+			}
+			try {
 				fsdOut.close();
+				FileSystem.get(new java.net.URI(path), this.jobConf).rename(new Path (tempOutputFileString), new Path (destOutputFileString));
 			} catch ( Exception e ) {
-				LOG.error( "Error processing file: " + path, e );
+				LOG.error( "Error finalizing file (after record writes):" + path, e );
 				if ( ! this.jobConf.getBoolean( "soft", false ) ) {
 					throw new IOException( e );
 				}
-			} finally {
-				LOG.info( "Finish: "  + path );
-			}
+			} 
 		}
 	}
 

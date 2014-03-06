@@ -104,13 +104,14 @@ public class WARCMetadataRecordGenerator extends Configured implements Tool {
 			String inputBasename = null;
 			String outputBasename = null;
 
-			String outputFileString = null;
+			String tempOutputFileString = null;
+			String destOutputFileString = null;
 			FSDataOutputStream fsdOut = null;
+			long millis = System.currentTimeMillis();
 
 			try {
 				inputPath = new Path(path);
 				fis = FileSystem.get( new java.net.URI( path ), this.jobConf ).open( inputPath );
-			
 				inputBasename = inputPath.getName();
 			
 				if(path.endsWith(".gz")) {
@@ -125,37 +126,57 @@ public class WARCMetadataRecordGenerator extends Configured implements Tool {
 			
 			//open output file handle
 			try {
-				outputFileString = this.jobConf.get("outputDir") + "/" + outputBasename;
-				fsdOut = FileSystem.get( new java.net.URI( outputFileString ), this.jobConf ).create(new Path (outputFileString), false); 
+				destOutputFileString = this.jobConf.get("outputDir") + "/" + outputBasename;
+				tempOutputFileString =  destOutputFileString + "." + millis + ".TMP";
+				fsdOut = FileSystem.get( new java.net.URI( tempOutputFileString ), this.jobConf ).create(new Path (tempOutputFileString), false); 
 			} catch (Exception e) {
-				LOG.error( "Error opening output file: " + outputFileString, e );
+				LOG.error( "Error opening output file: " + tempOutputFileString, e );
 				throw new IOException( e );
 			}
 			
+			ExtractorOutput out;
+			ResourceProducer producer;
+			ResourceFactoryMapper mapper;
+			ExtractingResourceProducer exProducer;
+
 			//data generation phase 
 			try {	
-				ExtractorOutput out;
 				out = new WARCMetadataRecordExtractorOutput(new PrintWriter(fsdOut),this.jobConf.get("outputType"));
-				ResourceProducer producer = ProducerUtils.getProducer(path.toString());
-				ResourceFactoryMapper mapper = new ExtractingResourceFactoryMapper();
-				ExtractingResourceProducer exProducer = new ExtractingResourceProducer(producer, mapper);
+				producer = ProducerUtils.getProducer(path.toString());
+				mapper = new ExtractingResourceFactoryMapper();
+				exProducer = new ExtractingResourceProducer(producer, mapper);
+			} catch ( Exception e ) {
+				LOG.error( "Error processing file (before record writes): " + path, e );
+				throw new IOException( e );
+			}
+			
+			int count = 0;
+			Resource r = null;
 
-				int count = 0;
-				while(count < Integer.MAX_VALUE) {
-					Resource r = exProducer.getNext();
+			while(count < Integer.MAX_VALUE) {
+				try {
+					r = exProducer.getNext();
 					if(r == null) {
 						break;
 					}
-					count++;
 					out.output(r);
 				}
-				fsdOut.close();
-			} catch ( Exception e ) {
-				LOG.error( "Error processing file: " + path, e );
-					throw new IOException( e );
-			} finally {
-				LOG.info( "Finish: "  + path );
+				catch ( Exception e ) {
+					LOG.error( "Error processing file (record): " + path, e );
+					if ( ! this.jobConf.getBoolean( "soft", false ) ) {
+						throw new IOException( e );
+					}
+				}
+				count++;
 			}
+
+			try {
+				fsdOut.close();
+				FileSystem.get(new java.net.URI(path), this.jobConf).rename(new Path (tempOutputFileString), new Path (destOutputFileString));
+			} catch ( Exception e ) {
+				LOG.error( "Error finalizing file (after record writes): " + path, e );
+					throw new IOException( e );
+			} 
 		}
 	}
 

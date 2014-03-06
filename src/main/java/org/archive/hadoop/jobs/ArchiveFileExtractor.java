@@ -261,7 +261,10 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 		
 			FileBackedInputStream fbis = null;
 			InputStream is = null;
-			
+                        long millis = System.currentTimeMillis();
+			String destArcOutputFileString = null;
+			String destWarcOutputFileString = null;
+	
 			for (int i=0; i< resourceLocations.length; i++) {
 				
 				String[] offLoc = resourceLocations[i].split(",");
@@ -307,11 +310,12 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 					if(isArc) {
 						if(firstArcRecord) {
 							String newArcName = arcNamer.getNextName();
-							String outputFileString = this.jobConf.get("outputDir") + "/" + newArcName;
+							destArcOutputFileString = this.jobConf.get("outputDir") + "/" + newArcName;
+							String outputFileString = destArcOutputFileString + "." + millis + ".TMP";
 							currentArcOS = FileSystem.get( new java.net.URI( outputFileString ), this.jobConf ).create(new Path (outputFileString), false); 
 							byte[] header = getARCHeader(newArcName);
 							GZIPMemberWriter w = new GZIPMemberWriter(currentArcOS);
-   	     					w.write(new ByteArrayInputStream(header));
+   	     						w.write(new ByteArrayInputStream(header));
 							firstArcRecord = false;
 						}
 						LimitInputStream lis = new LimitInputStream(orig, length);
@@ -319,11 +323,12 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 					} else {
 						if(firstWarcRecord) {
 							String newWarcName = warcNamer.getNextName();
-							String outputFileString = this.jobConf.get("outputDir") + "/" + newWarcName;
+							destWarcOutputFileString = this.jobConf.get("outputDir") + "/" + newWarcName;
+							String outputFileString = destWarcOutputFileString + "." + millis + ".TMP";
 							currentWarcOS = FileSystem.get( new java.net.URI( outputFileString ), this.jobConf ).create(new Path (outputFileString), false); 
 							byte[] header = getWARCHeader(newWarcName);
 							GZIPMemberWriter w = new GZIPMemberWriter(currentWarcOS);
-           					w.write(new ByteArrayInputStream(header));
+           						w.write(new ByteArrayInputStream(header));
 							firstWarcRecord = false;
 						}
 						LimitInputStream lis = new LimitInputStream(orig, length);
@@ -347,10 +352,20 @@ public class ArchiveFileExtractor extends Configured implements Tool {
 			}
 			
 			// end of for loop
-			if(currentArcOS != null)
-				currentArcOS.close();
-			if(currentWarcOS != null)
-				currentWarcOS.close();
+			try {
+				if(currentArcOS != null) {
+					currentArcOS.close();
+					FileSystem.get(new java.net.URI(destArcOutputFileString + "." + millis + ".TMP"), this.jobConf).rename(new Path (destArcOutputFileString + "." + millis + ".TMP"), new Path (destArcOutputFileString));
+				}
+				
+				if(currentWarcOS != null) {
+					currentWarcOS.close();
+					FileSystem.get(new java.net.URI(destWarcOutputFileString + "." + millis + ".TMP"), this.jobConf).rename(new Path (destWarcOutputFileString + "." + millis + ".TMP"), new Path (destWarcOutputFileString));
+				}
+			} catch (Exception e) {
+				LOG.error( "Error processing: ", e );
+				throw new IOException(e.toString() + "Error finalizing files");
+			}
 		} 
 	}
 
