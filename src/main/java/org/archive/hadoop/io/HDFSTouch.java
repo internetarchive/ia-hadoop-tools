@@ -15,14 +15,15 @@ public class HDFSTouch implements Tool {
 	
 	public final static String TOOL_NAME = "hdfs-touch";
 	
-	public final String DEFAULT_NAME_NODE_URI = "hdfs://ia400005.us.archive.org:6000";
-	
 	public final static String TMP_FILENAME = ".tmp_touch_latest";
 	
 	public final static String FORMAT_STR = "yyyy-MM-dd HH:mm:ss";
 	public final static String HTTP_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
 	
-	protected SimpleDateFormat formats[] = { new SimpleDateFormat(FORMAT_STR), new SimpleDateFormat(HTTP_FORMAT) };
+	protected SimpleDateFormat formats[] = {
+			new SimpleDateFormat(FORMAT_STR),
+			new SimpleDateFormat(HTTP_FORMAT)
+	};
 	
 	
 	public static void main(String[] args) throws Exception {
@@ -38,14 +39,15 @@ public class HDFSTouch implements Tool {
 		return conf;
 	}
 	
-	public static int USAGE(int code) {
-		System.err.println("Usage: " + TOOL_NAME + "[ -d ] HDFS_URL <" + FORMAT_STR + ">");
-		System.err.println("Updated the mtime and atime on the specified hdfs path to current time, or optional timestamp");
-		return code;
+	public static void print_usage() {
+		System.err.println("Usage: " + TOOL_NAME + " [ -d ] HDFS_URL [ TIMESTAMP ]");
+		System.err.println("Updates the mtime and atime of HDFS_URL to current time, or optional TIMESTAMP");
+		System.err.println("Accepts following TIMESTAMP formats:");
+		System.err.println("  " + FORMAT_STR);
+		System.err.println("  " + HTTP_FORMAT);
 	}
 	
-	protected long parseFormats(String arg)
-	{
+	protected long parseFormats(String arg) {
 		long mtime = -1;
 		
 		for (SimpleDateFormat format : formats) {
@@ -69,7 +71,8 @@ public class HDFSTouch implements Tool {
 	public int run(String[] args) throws Exception {
 		
 		if (args.length < 1) {
-			USAGE(1);
+			print_usage();
+			return 1;
 		}
 		
 		String filePath = null;
@@ -82,15 +85,12 @@ public class HDFSTouch implements Tool {
 			filePath = args[1];
 		}
 		
-		if (!filePath.startsWith("hdfs://")) {
-			filePath = DEFAULT_NAME_NODE_URI + filePath;
-		}
-		
 		Path path = new Path(filePath);
 		FileSystem fs = path.getFileSystem(conf);
 		
 		if (fs.getFileStatus(path).isDir()) {
-			System.err.println("Can't touch directories in this version\nThis is a directory: " + path);
+			System.err.println("Can't touch directories in this version\n" +
+					"This is a directory: " + path);
 			return 1;
 		}
 		
