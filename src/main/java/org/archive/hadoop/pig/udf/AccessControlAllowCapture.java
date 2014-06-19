@@ -35,7 +35,7 @@ public class AccessControlAllowCapture extends FilterFunc {
 	@Override
 	public Boolean exec(Tuple input) throws IOException {
 		
-		if (input == null || (input.size() < 2) || input.isNull(0) || input.isNull(1)) {
+		if (input == null || input.size() < 2) {
 			return false;
 		}
 		
