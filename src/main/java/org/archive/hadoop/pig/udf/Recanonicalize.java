@@ -31,7 +31,7 @@ public class Recanonicalize extends EvalFunc<String> {
 	@Override
 	public String exec(Tuple tuple) throws IOException {
 		
-		if (tuple == null || tuple.isNull(0)) {
+		if (tuple == null || tuple.size() == 0) {
 			return null;
 		}
 		

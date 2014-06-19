@@ -114,7 +114,7 @@ public class ZipNumLoader extends TextLoader implements IndexableLoadFunc, Colle
 
 	@Override
 	public void seekNear(Tuple tuple) throws IOException {
-		if (tuple.isNull(0) || tuple.size() < 1) {
+		if (tuple.size() < 1 || tuple.isNull(0)) {
 			return;
 		}
 		
