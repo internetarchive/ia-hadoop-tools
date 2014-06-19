@@ -508,6 +508,11 @@ public class HBaseStorage extends LoadFunc implements StoreFuncInterface, LoadPu
     @Override
     public void cleanupOnFailure(String location, Job job) throws IOException {
     }
+    
+    @Override
+    public void cleanupOnSuccess(String location, Job job) throws IOException {
+    }
+
 
     /*
      * LoadPushDown Methods.
