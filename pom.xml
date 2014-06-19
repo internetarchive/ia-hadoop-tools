@@ -54,10 +54,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase</artifactId>
-      <version>0.90.5</version>
-      <type>jar</type>
-      <scope>provided</scope>
+      <artifactId>hbase-client</artifactId>
+      <version>0.96.1.1-hadoop2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+      <version>0.96.1.1-hadoop2</version>
     </dependency>
     <dependency>
       <groupId>org.apache.cassandra</groupId>

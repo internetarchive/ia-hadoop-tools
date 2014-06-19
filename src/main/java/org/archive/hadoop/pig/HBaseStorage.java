@@ -92,6 +92,7 @@ import com.google.common.collect.Lists;
  * Note(Kenji Nagahshi): this is a copy of org.apache.pig.backend.hadoop.hbase.HBaseStorage with
  * small modification for allowing pig script to pass timestamp for each row. currently timestamp support
  * is for write (store) only.
+ * Note(KN): this class has not been fully updated for Hadoop-2 (HBase-0.96.1.1) yet.
  */
 public class HBaseStorage extends LoadFunc implements StoreFuncInterface, LoadPushDown, OrderedLoadFunc {
     
@@ -371,15 +372,20 @@ public class HBaseStorage extends LoadFunc implements StoreFuncInterface, LoadPu
     }
 
     private static String convertScanToString(Scan scan) {
-        try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(out);
-            scan.write(dos);
-            return Base64.encodeBytes(out.toByteArray());
-        } catch (IOException e) {
-            LOG.error(e);
-            return "";
-        }
+    	// disabled because Scan.write() method does not exist in 0.96.1.1
+    	// and I haven't figured out the replacement. Perhaps this breaks
+    	// something. I need to redo this entire class based on HBaseStorage
+    	// in Pig-0.12.
+    	return "";
+//        try {
+//            ByteArrayOutputStream out = new ByteArrayOutputStream();
+//            DataOutputStream dos = new DataOutputStream(out);
+//            scan.write(dos);
+//            return Base64.encodeBytes(out.toByteArray());
+//        } catch (IOException e) {
+//            LOG.error(e);
+//            return "";
+//        }
 
     }
 

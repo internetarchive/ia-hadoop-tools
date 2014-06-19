@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat;
-import org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner;
+import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -45,6 +45,8 @@ import org.mortbay.util.ajax.JSON;
  * map will be converted into JSON and stored in single column whose name is specified
  * as constructor argument to HFileStorage.
  * 
+ * Note: this class is not yet fully tested against CDH5 (Pig-0.12 / HBase-0.96.1.1)
+ *
  * @author Kenji Nagahashi
  *
  */
@@ -174,12 +176,12 @@ public class HFileStorage extends StoreFunc {
    */
   private void configureIncrementalLoad(Job job) throws IOException {
     // setup HFile partitioning appropriate for HTable's regions
-    HTable table = new HTable(tableName);
+	Configuration conf = job.getConfiguration();
+    HTable table = new HTable(conf, tableName);
     // configureIncrementalLoad() sets up not only partitioning, but also reducerClass, outputKeyClass,
     // outputValueClass, etc. It is not appropriate for use with PIG.
     //HFileOutputFormat.configureIncrementalLoad(job, table);
     // following code is stolen from HFileOutputFormat
-    Configuration conf = job.getConfiguration();
     job.setPartitionerClass(TotalOrderPartitioner.class);
     LOG.info("Looking up current regions for table " + tableName);
     List<ImmutableBytesWritable> startKeys = getRegionStartKeys(table);
