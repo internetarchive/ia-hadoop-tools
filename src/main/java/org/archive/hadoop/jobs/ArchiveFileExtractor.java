@@ -17,7 +17,6 @@
 package org.archive.hadoop.jobs;
 
 import com.google.common.io.ByteStreams;
-import com.google.common.io.LimitInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -318,8 +317,7 @@ public class ArchiveFileExtractor extends Configured implements Tool {
    	     						w.write(new ByteArrayInputStream(header));
 							firstArcRecord = false;
 						}
-						LimitInputStream lis = new LimitInputStream(orig, length);
-						ByteStreams.copy(lis, currentArcOS);
+						ByteStreams.copy(ByteStreams.limit(orig, length), currentArcOS);
 					} else {
 						if(firstWarcRecord) {
 							String newWarcName = warcNamer.getNextName();
@@ -331,8 +329,7 @@ public class ArchiveFileExtractor extends Configured implements Tool {
            						w.write(new ByteArrayInputStream(header));
 							firstWarcRecord = false;
 						}
-						LimitInputStream lis = new LimitInputStream(orig, length);
-						ByteStreams.copy(lis, currentWarcOS);
+						ByteStreams.copy(ByteStreams.limit(orig, length), currentWarcOS);
 					}
 					output.collect("SUCCESS",offset + "\t" + url);
 				} catch (Exception e) {
