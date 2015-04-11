@@ -66,7 +66,7 @@ public class ZipNumRecordReader implements RecordReader<Text, Text> {
 	
 
 	@Override
-	public float getProgress() {
+	public float getProgress() throws IOException {
 		return inner.getProgress();
 	}
 
