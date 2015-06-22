@@ -29,7 +29,8 @@ public class AccessControlAllowCapture extends FilterFunc {
 		this.retrievalDate = new Date();
 		
 		// Loads all the rules
-		this.client.prepare(null);
+                //06/22/15: commenting out the prepare method to prevent "all" queries
+		//this.client.prepare(null);
 	}
 
 	@Override
