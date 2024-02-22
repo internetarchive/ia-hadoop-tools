@@ -138,7 +138,7 @@
     <repository>
       <id>internetarchive</id>
       <name>Internet Archive Maven Repository</name>
-      <url>http://builds.archive.org:8080/maven2</url>
+      <url>http://builds.archive.org/maven2</url>
       <layout>default</layout>
 
       <releases>
